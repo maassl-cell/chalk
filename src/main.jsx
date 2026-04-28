@@ -62,6 +62,40 @@ function usd(value) {
   return `$${(value / 100).toFixed(2)}`;
 }
 
+function normalizeSearch(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function fuzzyScoreCommunity(group, query) {
+  const search = normalizeSearch(query);
+  if (!search) return 1;
+
+  const name = normalizeSearch(group.name);
+  const haystack = normalizeSearch(`${group.name} ${group.type}`);
+  if (haystack.includes(search)) return 100;
+
+  const words = search.split(" ").filter(Boolean);
+  const wordScore = words.reduce((score, word) => {
+    if (haystack.includes(word)) return score + 25;
+    return score;
+  }, 0);
+
+  let cursor = 0;
+  let sequenceScore = 0;
+  for (const letter of search.replace(/\s/g, "")) {
+    const nextIndex = name.indexOf(letter, cursor);
+    if (nextIndex === -1) continue;
+    sequenceScore += 1;
+    cursor = nextIndex + 1;
+  }
+
+  return wordScore + sequenceScore;
+}
+
 function marketProbability(yesPool = 0, noPool = 0) {
   const totalPool = yesPool + noPool;
   if (totalPool <= 0) return 50;
@@ -1000,9 +1034,11 @@ function FriendsView({
   toast,
   onOpenMarket,
 }) {
-  const filteredCommunities = communities.filter((group) =>
-    `${group.name} ${group.type}`.toLowerCase().includes(communitySearch.toLowerCase()),
-  );
+  const filteredCommunities = communities
+    .map((group) => ({ group, score: fuzzyScoreCommunity(group, communitySearch) }))
+    .filter((result) => !normalizeSearch(communitySearch) || result.score > 0)
+    .sort((a, b) => b.score - a.score || a.group.name.localeCompare(b.group.name))
+    .map((result) => result.group);
   const activeCommunity = communities.find((group) => String(group.id) === String(selectedCommunityId));
   const activeMessages = communityMessages.filter((message) => String(message.communityId) === String(selectedCommunityId));
   const activeCommunityMarkets = markets.filter((market) => String(market.communityId) === String(selectedCommunityId));
@@ -1195,7 +1231,7 @@ function FriendsView({
           </div>
         </article>
         <article className="market-card compact-card community-directory">
-          <h3>My communities</h3>
+          <h3>Community results</h3>
           <div className="friend-bet-list">
             {filteredCommunities.length === 0 ? (
               <p className="subtle">No communities match that search.</p>
