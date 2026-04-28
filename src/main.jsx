@@ -1133,20 +1133,49 @@ function ProfileView({ positions, userProfile }) {
   );
 }
 
-function MyBetsView({ positions }) {
+function MyBetsView({ positions, createdMarkets }) {
+  const totalItems = positions.length + createdMarkets.length;
+
   return (
     <section>
       <div className="section-head">
         <h2>My Bets</h2>
-        <button>{positions.length} open</button>
+        <button>{totalItems} total</button>
       </div>
       <div className="market-grid">
-        {positions.length === 0 && (
+        {totalItems === 0 && (
           <article className="market-card compact-card">
-            <h3>No bets placed yet.</h3>
-            <p className="subtle">Open a market, choose YES or NO, set your volume, and confirm the trade.</p>
+            <h3>No bets yet.</h3>
+            <p className="subtle">Create a market or place a trade and it will appear here automatically.</p>
           </article>
         )}
+        {createdMarkets.map((market) => (
+          <article className="market-card compact-card" key={`created-${market.id}`}>
+            <div className="market-top">
+              <span className="community-dot"><i />{market.community}</span>
+              <Pill tone={market.status === "Resolved" ? "bad" : "good"}>Created</Pill>
+            </div>
+            <h3>{market.title}</h3>
+            <div className="bet-summary">
+              <div>
+                <span>YES</span>
+                <strong>{market.yes}%</strong>
+              </div>
+              <div>
+                <span>Volume</span>
+                <strong>{market.volume.toLocaleString()}</strong>
+              </div>
+              <div>
+                <span>Traders</span>
+                <strong>{market.traders ?? 0}</strong>
+              </div>
+              <div>
+                <span>Status</span>
+                <strong>{market.status}</strong>
+              </div>
+            </div>
+          </article>
+        ))}
         {positions.map((position) => (
           <article className="market-card compact-card" key={position.id}>
             <div className="market-top">
@@ -1921,6 +1950,7 @@ function App() {
 
   const friendIds = friendsList.map((friend) => friend.id);
   const friendMarkets = markets.filter((market) => friendIds.includes(market.creatorId));
+  const createdMarkets = markets.filter((market) => market.creatorId === userProfile?.id);
   const claimReady = canClaimCredits(userProfile?.last_credit_claim_at, now);
   const claimCountdown = claimCountdownLabel(userProfile?.last_credit_claim_at, now);
 
@@ -1986,7 +2016,7 @@ function App() {
             onOpenMarket={openMarketFromFriends}
           />
         )}
-        {view === "bets" && <MyBetsView positions={positions} />}
+        {view === "bets" && <MyBetsView positions={positions} createdMarkets={createdMarkets} />}
         {view === "profile" && <ProfileView positions={positions} userProfile={userProfile} />}
         {view === "dm" && <DmsView setView={setView} toast={toast} />}
         {view === "shop" && <ShopView onBuyCosmetic={buyCosmetic} />}
