@@ -50,6 +50,7 @@ const POOL_FEE_RATE = 0.03;
 const INFINITE_CREDITS = 999999999;
 const DAILY_CLAIM_AMOUNT = 1000;
 const DAILY_CLAIM_MS = 24 * 60 * 60 * 1000;
+const VOTE_WINDOW_MS = 60 * 60 * 1000;
 
 function currency(value) {
   if (value >= INFINITE_CREDITS) return "∞";
@@ -116,6 +117,26 @@ function parseCloseDate(value) {
   if (Number.isNaN(textDate.getTime())) return null;
   if (textDate < new Date()) textDate.setFullYear(textDate.getFullYear() + 1);
   return textDate;
+}
+
+function votingState(market, now = Date.now()) {
+  if (market.status === "Resolved" || market.resolver !== "Vote") return "none";
+  const closeDate = parseCloseDate(market.closes);
+  if (!closeDate) return "none";
+  const closeTime = closeDate.getTime();
+  if (now < closeTime) return "waiting";
+  if (now <= closeTime + VOTE_WINDOW_MS) return "open";
+  return "ended";
+}
+
+function voteWindowLabel(market, now = Date.now()) {
+  const closeDate = parseCloseDate(market.closes);
+  if (!closeDate) return "";
+  const endTime = closeDate.getTime() + VOTE_WINDOW_MS;
+  const diffMs = endTime - now;
+  if (diffMs <= 0) return "Voting ended";
+  const minutes = Math.ceil(diffMs / 60000);
+  return `${minutes}m left to vote`;
 }
 
 function timeLeftLabel(closes, now = Date.now()) {
@@ -270,6 +291,8 @@ function marketFromRow(row) {
     createdAt: row.created_at?.slice(0, 10) || new Date().toISOString().slice(0, 10),
     creator: row.creator_name || "Chalk user",
     creatorId: row.creator_id,
+    thirdPartyResolverId: row.third_party_resolver_id,
+    thirdPartyResolverName: row.third_party_resolver_name,
   };
 }
 
@@ -313,7 +336,7 @@ function Pill({ children, tone = "" }) {
   return <span className={`pill ${tone}`}>{children}</span>;
 }
 
-function MarketCard({ market, onBuy, onResolve }) {
+function MarketCard({ market, currentUserId, voteCounts = {}, onBuy, onResolve, onVote }) {
   const [ticket, setTicket] = useState(null);
   const [amount, setAmount] = useState(String(TRADE_CREDITS));
   const [ticketError, setTicketError] = useState("");
@@ -335,6 +358,15 @@ function MarketCard({ market, onBuy, onResolve }) {
     .join(" ");
   const sparkTone = market.yes > 50 ? "up" : market.yes < 50 ? "down" : "even";
   const sparkDates = axisDates(market.createdAt, new Date(now));
+  const voteState = votingState(market, now);
+  const votes = voteCounts[market.id] || { yes: 0, no: 0, myVote: null };
+  const canCreatorResolve = market.resolver === "Creator" && market.creatorId === currentUserId;
+  const canThirdPartyResolve = market.resolver === "Third party" && market.thirdPartyResolverId === currentUserId;
+  const canResolve = canCreatorResolve || canThirdPartyResolve;
+  const cannotBetReason =
+    market.thirdPartyResolverId === currentUserId
+      ? "You are the third-party resolver for this market."
+      : "";
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
@@ -343,6 +375,10 @@ function MarketCard({ market, onBuy, onResolve }) {
 
   function openTicket(side) {
     if (market.status === "Resolved") return;
+    if (cannotBetReason) {
+      setTicketError(cannotBetReason);
+      return;
+    }
     setTicket((current) => (current === side ? null : side));
     setAmount(String(TRADE_CREDITS));
     setTicketError("");
@@ -361,6 +397,10 @@ function MarketCard({ market, onBuy, onResolve }) {
 
   async function submitTrade() {
     if (!ticket) return;
+    if (cannotBetReason) {
+      setTicketError(cannotBetReason);
+      return;
+    }
     if (!Number.isFinite(numericAmount) || numericAmount < MIN_TRADE_AMOUNT) {
       setTicketError("Minimum bet is 50.");
       return;
@@ -408,13 +448,14 @@ function MarketCard({ market, onBuy, onResolve }) {
         <span style={{ width: `${market.yes}%` }} />
       </div>
       <div className="trade-controls">
-        <button disabled={market.status === "Resolved"} className={`trade-button ${market.yes === 50 ? "even" : ""} ${ticket === "yes" ? "active yes" : ""}`} onClick={() => openTicket("yes")}>
+        <button disabled={market.status === "Resolved" || Boolean(cannotBetReason)} className={`trade-button ${market.yes === 50 ? "even" : ""} ${ticket === "yes" ? "active yes" : ""}`} onClick={() => openTicket("yes")}>
           YES&nbsp; {market.yes}%
         </button>
-        <button disabled={market.status === "Resolved"} className={`trade-button ${market.yes === 50 ? "even" : ""} ${ticket === "no" ? "active no" : ""}`} onClick={() => openTicket("no")}>
+        <button disabled={market.status === "Resolved" || Boolean(cannotBetReason)} className={`trade-button ${market.yes === 50 ? "even" : ""} ${ticket === "no" ? "active no" : ""}`} onClick={() => openTicket("no")}>
           NO&nbsp; {no}%
         </button>
       </div>
+      {cannotBetReason && <p className="market-note">{cannotBetReason}</p>}
       <div className="pool-breakdown">
         <div>
           <span>YES Pool</span>
@@ -473,11 +514,33 @@ function MarketCard({ market, onBuy, onResolve }) {
       <div className="resolve-controls">
         {market.status === "Resolved" ? (
           <span>Resolved {market.outcome?.toUpperCase()}</span>
-        ) : (
+        ) : voteState === "open" ? (
+          <div className="vote-box">
+            <span>{voteWindowLabel(market, now)}</span>
+            <div>
+              <button type="button" className={votes.myVote === "yes" ? "active" : ""} onClick={() => onVote(market.id, "yes")}>
+                Vote YES ({votes.yes})
+              </button>
+              <button type="button" className={votes.myVote === "no" ? "active" : ""} onClick={() => onVote(market.id, "no")}>
+                Vote NO ({votes.no})
+              </button>
+            </div>
+          </div>
+        ) : voteState === "waiting" ? (
+          <span>Vote opens when market closes</span>
+        ) : market.resolver === "Vote" ? (
+          <span>Vote finalizing</span>
+        ) : canResolve ? (
           <>
             <button type="button" onClick={() => onResolve(market.id, "yes")}>Resolve YES</button>
             <button type="button" onClick={() => onResolve(market.id, "no")}>Resolve NO</button>
           </>
+        ) : (
+          <span>
+            {market.resolver === "Third party"
+              ? `${market.thirdPartyResolverName || "Third party"} resolves`
+              : "Only creator can resolve"}
+          </span>
         )}
       </div>
       {chartOpen && (
@@ -510,6 +573,8 @@ function MarketModal({ communities, friendsList, onClose, onCreate }) {
   const [startingYes, setStartingYes] = useState(50);
   const [seedPool, setSeedPool] = useState(String(MARKET_SEED_POOL));
   const [sendToFriendId, setSendToFriendId] = useState("");
+  const [thirdPartyResolverId, setThirdPartyResolverId] = useState("");
+  const [formError, setFormError] = useState("");
 
   const calendarDays = useMemo(() => {
     const year = calendarMonth.getFullYear();
@@ -540,8 +605,13 @@ function MarketModal({ communities, friendsList, onClose, onCreate }) {
       setSeedPool(String(MIN_SEED_POOL));
       return;
     }
+    if (resolver === "Third party" && !thirdPartyResolverId) {
+      setFormError("Choose a friend to resolve this market.");
+      return;
+    }
     const communityId = form.get("community") || null;
     const selectedCommunity = communities.find((group) => String(group.id || group.name) === String(communityId));
+    const thirdParty = friendsList.find((friend) => friend.id === thirdPartyResolverId);
     onCreate({
       title: form.get("title"),
       description: "Created from Chalk.",
@@ -553,6 +623,8 @@ function MarketModal({ communities, friendsList, onClose, onCreate }) {
       yes: Number(startingYes),
       seedPool: seedAmount,
       sendToFriendId,
+      thirdPartyResolverId: resolver === "Third party" ? thirdPartyResolverId : null,
+      thirdPartyResolverName: resolver === "Third party" ? thirdParty?.name : null,
     });
   }
 
@@ -638,13 +710,27 @@ function MarketModal({ communities, friendsList, onClose, onCreate }) {
                   type="button"
                   key={option}
                   className={resolver === option ? "active" : ""}
-                  onClick={() => setResolver(option)}
+                  onClick={() => {
+                    setResolver(option);
+                    setFormError("");
+                  }}
                 >
                   {option}
                 </button>
               ))}
             </div>
           </div>
+          {resolver === "Third party" && (
+            <label className="field wide send-field">
+              <span>Third-party resolver</span>
+              <select value={thirdPartyResolverId} onChange={(event) => setThirdPartyResolverId(event.target.value)}>
+                <option value="">Choose friend</option>
+                {friendsList.map((friend) => (
+                  <option key={friend.id} value={friend.id}>{friend.name}</option>
+                ))}
+              </select>
+            </label>
+          )}
           <div className="resolution-block">
             <span>Starting odds</span>
             <div className="starting-odds-row">
@@ -670,6 +756,7 @@ function MarketModal({ communities, friendsList, onClose, onCreate }) {
               onChange={(event) => setSeedPool(event.target.value)}
             />
           </div>
+          {formError && <p className="form-error">{formError}</p>}
           <button className="post-market-button">Post Market</button>
         </div>
       </form>
@@ -824,7 +911,7 @@ function Sidebar({ view, setView, credits, streak, claimReady, claimCountdown, o
   );
 }
 
-function MarketsView({ markets, tab, setTab, search, setSearch, onBuy, onResolve }) {
+function MarketsView({ markets, currentUserId, voteCounts, tab, setTab, search, setSearch, onBuy, onResolve, onVote }) {
   const filteredMarkets = useMemo(
     () =>
       markets.filter((market) => {
@@ -856,8 +943,11 @@ function MarketsView({ markets, tab, setTab, search, setSearch, onBuy, onResolve
           <MarketCard
             key={market.id}
             market={market}
+            currentUserId={currentUserId}
+            voteCounts={voteCounts}
             onBuy={onBuy}
             onResolve={onResolve}
+            onVote={onVote}
           />
         ))}
         {filteredMarkets.length === 0 && (
@@ -882,6 +972,8 @@ function FriendsView({
   selectedCommunityId,
   setSelectedCommunityId,
   communityMessages,
+  chatDraft,
+  setChatDraft,
   markets,
   friendsList,
   sentMarkets,
@@ -890,6 +982,7 @@ function FriendsView({
   setFriendUsername,
   onAddFriend,
   onCreateCommunity,
+  onSendCommunityMessage,
   toast,
   onOpenMarket,
 }) {
@@ -931,6 +1024,14 @@ function FriendsView({
           </div>
           <div className="community-room-section">
             <h4>Chat</h4>
+            <form className="community-chat-form" onSubmit={(event) => onSendCommunityMessage(event, activeCommunity.id)}>
+              <input
+                value={chatDraft}
+                placeholder={`Message ${activeCommunity.name}`}
+                onChange={(event) => setChatDraft(event.target.value)}
+              />
+              <button type="submit">Send</button>
+            </form>
             <div className="community-chat">
               {activeMessages.length === 0 ? (
                 <p className="subtle">No chat posts yet. Markets posted to this community will appear here.</p>
@@ -1326,8 +1427,10 @@ function App() {
   const [communityName, setCommunityName] = useState("");
   const [communityType, setCommunityType] = useState("Private");
   const [selectedCommunityId, setSelectedCommunityId] = useState("");
+  const [chatDraft, setChatDraft] = useState("");
   const [friendsList, setFriendsList] = useState([]);
   const [sentMarkets, setSentMarkets] = useState([]);
+  const [voteCounts, setVoteCounts] = useState({});
   const [friendUsername, setFriendUsername] = useState("");
   const [modal, setModal] = useState(null);
   const [toastText, setToastText] = useState("");
@@ -1364,6 +1467,7 @@ function App() {
       setPositions([]);
       setCommunities(initialCommunities);
       setCommunityMessages([]);
+      setVoteCounts({});
       setFriendsList([]);
       setSentMarkets([]);
       return;
@@ -1436,8 +1540,24 @@ function App() {
     setPositions((positionRows ?? []).map(positionFromRow));
     const nextCommunities = (communityRows ?? []).map(communityFromRow);
     setCommunities(nextCommunities);
-    await Promise.all([loadFriends(user.id), loadSentMarkets(user.id), loadCommunityMessages()]);
+    await Promise.all([loadFriends(user.id), loadSentMarkets(user.id), loadCommunityMessages(), loadVoteCounts(user.id)]);
     setDataReady(true);
+  }
+
+  async function loadVoteCounts(userId) {
+    if (!supabase) return;
+    const { data: rows, error } = await supabase.from("market_votes").select("market_id, voter_id, vote");
+    if (error) {
+      toast(error.message);
+      return;
+    }
+    const counts = {};
+    (rows ?? []).forEach((row) => {
+      if (!counts[row.market_id]) counts[row.market_id] = { yes: 0, no: 0, myVote: null };
+      counts[row.market_id][row.vote] += 1;
+      if (row.voter_id === userId) counts[row.market_id].myVote = row.vote;
+    });
+    setVoteCounts(counts);
   }
 
   async function loadCommunityMessages() {
@@ -1466,6 +1586,37 @@ function App() {
         createdAt: new Date(row.created_at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }),
       })),
     );
+  }
+
+  async function sendCommunityMessage(event, communityId) {
+    event.preventDefault();
+    const body = chatDraft.trim();
+    if (!body || !supabase || !userProfile) return;
+    const { data, error } = await supabase
+      .from("community_messages")
+      .insert({
+        community_id: communityId,
+        sender_id: userProfile.id,
+        body,
+      })
+      .select("id, community_id, market_id, body, created_at")
+      .single();
+    if (error) {
+      toast(error.message);
+      return;
+    }
+    setCommunityMessages((current) => [
+      {
+        id: data.id,
+        communityId: data.community_id,
+        marketId: data.market_id,
+        body: data.body,
+        senderName: userProfile.display_name,
+        createdAt: new Date(data.created_at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }),
+      },
+      ...current,
+    ]);
+    setChatDraft("");
   }
 
   async function loadFriends(userId) {
@@ -1649,6 +1800,10 @@ function App() {
       return false;
     }
     const market = markets.find((item) => item.id === marketId);
+    if (market?.thirdPartyResolverId === userProfile?.id) {
+      toast("You are the third-party resolver and cannot bet in this market.");
+      return false;
+    }
     const payout = market ? estimatePoolPayout(market, side, tradeAmount) : 0;
     if (payout < tradeAmount) {
       toast("Payout must be at least your bet.");
@@ -1797,6 +1952,37 @@ function App() {
     toast(`Resolved ${outcome.toUpperCase()}. My Bets now shows profit/loss.`);
   }
 
+  async function voteOnMarket(marketId, vote) {
+    if (!supabase || !userProfile) return;
+    const market = markets.find((item) => item.id === marketId);
+    if (!market || votingState(market, Date.now()) !== "open") {
+      toast("Voting is not open for this market.");
+      return;
+    }
+    const previousVote = voteCounts[marketId]?.myVote;
+    const { error } = await supabase.from("market_votes").upsert(
+      {
+        market_id: marketId,
+        voter_id: userProfile.id,
+        vote,
+      },
+      { onConflict: "market_id,voter_id" },
+    );
+    if (error) {
+      toast(error.message);
+      return;
+    }
+    setVoteCounts((current) => {
+      const currentCount = current[marketId] || { yes: 0, no: 0, myVote: null };
+      const nextCount = { ...currentCount };
+      if (previousVote && nextCount[previousVote] > 0) nextCount[previousVote] -= 1;
+      if (previousVote !== vote) nextCount[vote] += 1;
+      nextCount.myVote = vote;
+      return { ...current, [marketId]: nextCount };
+    });
+    toast(`Voted ${vote.toUpperCase()}.`);
+  }
+
   async function createMarket(draft) {
     const seedCost = draft.seedPool ?? MARKET_SEED_POOL;
     if (credits < seedCost) {
@@ -1817,6 +2003,8 @@ function App() {
         createdAt: new Date().toISOString().slice(0, 10),
         creator: userProfile?.display_name || session?.user?.email?.split("@")[0] || "Chalk user",
         creatorId: userProfile?.id,
+        thirdPartyResolverId: draft.thirdPartyResolverId,
+        thirdPartyResolverName: draft.thirdPartyResolverName,
       };
 
     if (supabase && userProfile) {
@@ -1841,6 +2029,8 @@ function App() {
           traders: 0,
           history: nextMarket.history,
           creator_name: nextMarket.creator,
+          third_party_resolver_id: nextMarket.thirdPartyResolverId,
+          third_party_resolver_name: nextMarket.thirdPartyResolverName,
         })
         .select("*")
         .single();
@@ -1954,6 +2144,16 @@ function App() {
   const claimReady = canClaimCredits(userProfile?.last_credit_claim_at, now);
   const claimCountdown = claimCountdownLabel(userProfile?.last_credit_claim_at, now);
 
+  useEffect(() => {
+    if (!dataReady) return;
+    markets.forEach((market) => {
+      if (votingState(market, now) !== "ended") return;
+      const votes = voteCounts[market.id] || { yes: 0, no: 0 };
+      const outcome = votes.yes >= votes.no ? "yes" : "no";
+      resolveMarket(market.id, outcome);
+    });
+  }, [now, dataReady, markets, voteCounts]);
+
   if (!authReady) {
     return <div className="loading-screen">Loading Chalk...</div>;
   }
@@ -1984,12 +2184,15 @@ function App() {
         {view === "markets" && (
           <MarketsView
             markets={markets}
+            currentUserId={userProfile?.id}
+            voteCounts={voteCounts}
             tab={tab}
             setTab={setTab}
             search={search}
             setSearch={setSearch}
             onBuy={buy}
             onResolve={resolveMarket}
+            onVote={voteOnMarket}
           />
         )}
         {view === "groups" && (
@@ -2004,6 +2207,8 @@ function App() {
             selectedCommunityId={selectedCommunityId}
             setSelectedCommunityId={setSelectedCommunityId}
             communityMessages={communityMessages}
+            chatDraft={chatDraft}
+            setChatDraft={setChatDraft}
             markets={markets}
             friendsList={friendsList}
             sentMarkets={sentMarkets}
@@ -2012,6 +2217,7 @@ function App() {
             setFriendUsername={setFriendUsername}
             onAddFriend={addFriend}
             onCreateCommunity={createCommunity}
+            onSendCommunityMessage={sendCommunityMessage}
             toast={toast}
             onOpenMarket={openMarketFromFriends}
           />

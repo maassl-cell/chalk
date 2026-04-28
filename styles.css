@@ -2226,6 +2226,31 @@ body {
   gap: 10px;
 }
 
+.community-chat-form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+.community-chat-form input {
+  min-height: 46px;
+  padding: 0 14px;
+  border-radius: 14px;
+  color: var(--ink);
+  background: #fffdf8;
+  border: 1px solid var(--line);
+  font-weight: 750;
+}
+
+.community-chat-form button {
+  min-height: 46px;
+  padding: 0 16px;
+  border-radius: 14px;
+  color: white;
+  background: var(--blue);
+  font-weight: 900;
+}
+
 .community-chat button {
   width: 100%;
   min-height: 68px;
@@ -2455,6 +2480,14 @@ body {
   font-size: 19px;
 }
 
+.market-note,
+.form-error {
+  margin: -2px 0 0;
+  color: var(--red);
+  font-size: 13px;
+  font-weight: 850;
+}
+
 .resolve-controls {
   display: flex;
   gap: 10px;
@@ -2482,6 +2515,28 @@ body {
 
 .resolve-controls button:nth-child(2) {
   color: #d93052;
+}
+
+.vote-box {
+  width: 100%;
+  display: grid;
+  gap: 8px;
+}
+
+.vote-box > span {
+  justify-content: flex-start;
+}
+
+.vote-box > div {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.vote-box button.active {
+  color: white;
+  background: var(--blue);
+  border-color: var(--blue);
 }
 
 .ticket-head input,
