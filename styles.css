@@ -1,0 +1,2195 @@
+:root {
+  color-scheme: dark;
+  --bg: #050914;
+  --panel: #0f1728;
+  --panel-2: #17213a;
+  --line: #2c3e64;
+  --ink: #f4f7ff;
+  --muted: #8190af;
+  --blue: #3b82ff;
+  --blue-2: #68a2ff;
+  --blue-3: #1f4fa3;
+  --green: #56e6a0;
+  --red: #ff6575;
+  --gold: #ffd252;
+  --shadow: 0 24px 80px rgba(0, 0, 0, 0.42);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 50% -12%, rgba(59, 130, 255, 0.2), transparent 34rem),
+    linear-gradient(180deg, #070c18 0%, var(--bg) 42%, #030611 100%);
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  border: 0;
+  cursor: pointer;
+}
+
+.shell {
+  width: min(100%, 820px);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 20px 22px 120px;
+}
+
+.sidebar,
+.main,
+.social-rail {
+  width: 100%;
+}
+
+.phone-status,
+.app-head,
+.credit-row,
+.market-top,
+.price-row,
+.split,
+.toolbar,
+.profile-line,
+.dm-row,
+.leader-row,
+.modal-head,
+.receipt-foot,
+.section-head,
+.odds-line,
+.market-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.phone-status {
+  color: var(--muted);
+  font-weight: 800;
+  font-size: 24px;
+  letter-spacing: 0;
+  margin: 0 8px 26px;
+}
+
+.app-head {
+  margin-bottom: 28px;
+}
+
+.brand h1 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 52px;
+  font-style: italic;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1;
+}
+
+.brand h1 span {
+  color: var(--blue);
+}
+
+.brand p,
+.logo {
+  display: none;
+}
+
+.head-actions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.credit-pill,
+.bell {
+  min-height: 62px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, #1a2540, #121b30);
+  color: var(--ink);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.credit-pill {
+  min-width: 148px;
+  padding: 8px 18px;
+  display: grid;
+  place-items: center;
+  gap: 2px;
+  font-size: 15px;
+  font-weight: 850;
+}
+
+.credit-pill span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.credit-pill strong {
+  color: white;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.bell {
+  position: relative;
+  width: 72px;
+  font-size: 27px;
+}
+
+.bell i {
+  position: absolute;
+  right: 11px;
+  top: 8px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--red);
+}
+
+.nav {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  z-index: 40;
+  width: min(calc(100% - 20px), 760px);
+  min-height: 64px;
+  transform: translateX(-50%);
+  display: grid;
+  grid-template-columns: 1fr 1fr 56px 1fr 1.16fr;
+  align-items: center;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: rgba(11, 18, 32, 0.92);
+  box-shadow: 0 18px 70px rgba(0, 0, 0, 0.48);
+  backdrop-filter: blur(18px);
+}
+
+.nav button {
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  padding: 0 4px;
+  border-radius: 14px;
+  color: var(--muted);
+  background: transparent;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.nav button.active {
+  color: white;
+  background: linear-gradient(180deg, var(--blue), #2f6fe3);
+  box-shadow: 0 12px 28px rgba(59, 130, 255, 0.24);
+}
+
+.nav .create-tab {
+  width: 56px;
+  min-height: 56px;
+  margin-top: -18px;
+  border-radius: 18px;
+  color: white;
+  background: linear-gradient(180deg, #67a0ff, var(--blue));
+  border: 1px solid #7fb0ff;
+  box-shadow:
+    0 18px 42px rgba(59, 130, 255, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.24);
+  font-size: 34px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.nav .create-tab:hover {
+  background: linear-gradient(180deg, #7fb0ff, #4a8cff);
+}
+
+.compact-card {
+  min-height: 220px;
+  padding-bottom: 28px;
+}
+
+.bet-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.bet-summary div {
+  display: grid;
+  gap: 5px;
+  padding: 14px;
+  border: 1px solid #405985;
+  border-radius: 16px;
+  background: rgba(7, 12, 24, 0.46);
+}
+
+.bet-summary span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 850;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.bet-summary strong {
+  color: white;
+  font-size: 20px;
+}
+
+.profit-good {
+  color: var(--green) !important;
+}
+
+.profit-bad {
+  color: var(--red) !important;
+}
+
+.credit-card,
+.side-block,
+.market-card,
+.profile-card,
+.modal,
+.receipt {
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, #121c31, var(--panel));
+  box-shadow: var(--shadow);
+  border-radius: 28px;
+}
+
+.credit-card {
+  min-height: 190px;
+  padding: 34px 36px;
+  margin-bottom: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.streak-label {
+  display: block;
+  color: var(--blue-2);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-size: 23px;
+  font-weight: 900;
+  margin-bottom: 12px;
+}
+
+.credits {
+  font-size: 48px;
+  line-height: 1;
+  font-weight: 900;
+}
+
+.subtle,
+.eyebrow,
+.meta {
+  color: var(--muted);
+}
+
+.credit-card .subtle {
+  margin: 10px 0 0;
+  font-size: 24px;
+  font-weight: 650;
+}
+
+.primary,
+.secondary,
+.trade-button,
+.resolve-button {
+  min-height: 66px;
+  border-radius: 18px;
+  padding: 0 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 900;
+  color: var(--ink);
+  background: #111a2c;
+  border: 1px solid #45516a;
+}
+
+.primary {
+  color: white;
+}
+
+.secondary {
+  background: transparent;
+}
+
+.main {
+  min-width: 0;
+}
+
+.section-head {
+  margin: 4px 8px 22px;
+}
+
+.section-head h2 {
+  margin: 0;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 2.2px;
+  font-size: 25px;
+  font-weight: 900;
+}
+
+.section-head button {
+  color: var(--blue-2);
+  background: transparent;
+  font-size: 25px;
+  font-weight: 850;
+}
+
+.toolbar {
+  margin: 0 0 22px;
+}
+
+.market-filters,
+.search {
+  display: none;
+}
+
+.market-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+.market-card {
+  position: relative;
+  overflow: hidden;
+  padding: 34px 32px 0;
+  min-height: 422px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.market-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(135deg, rgba(59, 130, 255, 0.08), transparent 42%);
+}
+
+.market-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.market-card h3 {
+  margin: 4px 0 4px;
+  color: #f2f5ff;
+  font-size: 31px;
+  line-height: 1.18;
+  font-weight: 900;
+}
+
+.community-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 21px;
+  font-weight: 750;
+}
+
+.community-dot i {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--blue);
+  box-shadow: 0 0 18px rgba(59, 130, 255, 0.8);
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 16px;
+  border-radius: 12px;
+  color: var(--muted);
+  background: #192236;
+  border: 1px solid var(--line);
+  font-size: 14px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.pill.good {
+  color: #9fc4ff;
+  background: #17315b;
+  border-color: #1f4f94;
+}
+
+.pill.hot {
+  color: var(--gold);
+}
+
+.pill.bad {
+  color: var(--red);
+  background: #3b1720;
+  border-color: #4d2230;
+}
+
+.odds-line {
+  font-size: 25px;
+  font-weight: 900;
+}
+
+.yes-price {
+  color: var(--green);
+}
+
+.no-price {
+  color: var(--red);
+}
+
+.bar {
+  height: 10px;
+  background: #1b2743;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #25d96f, #75f0a9);
+}
+
+.trade-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.trade-button {
+  background: rgba(10, 16, 28, 0.58);
+  color: white;
+  border-color: #405985;
+}
+
+.trade-button.active.yes {
+  color: var(--green);
+  border-color: rgba(86, 230, 160, 0.72);
+  background: rgba(37, 217, 111, 0.11);
+}
+
+.trade-button.active.no {
+  color: var(--red);
+  border-color: rgba(255, 101, 117, 0.72);
+  background: rgba(255, 101, 117, 0.1);
+}
+
+.trade-button:hover,
+.primary:hover,
+.secondary:hover {
+  border-color: var(--blue-2);
+  background: rgba(59, 130, 255, 0.16);
+}
+
+.trade-ticket {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid #405985;
+  border-radius: 18px;
+  background: rgba(7, 12, 24, 0.72);
+}
+
+.ticket-head,
+.ticket-foot,
+.trade-ticket label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ticket-head span,
+.trade-ticket label span,
+.ticket-foot span {
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 850;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.ticket-foot div {
+  display: grid;
+  gap: 6px;
+}
+
+.ticket-foot .ticket-error {
+  color: var(--red);
+}
+
+.trade-ticket input[type="range"] {
+  width: 100%;
+  accent-color: var(--blue);
+}
+
+.ticket-head input,
+.trade-ticket input[type="number"] {
+  width: 150px;
+  min-height: 46px;
+  border: 1px solid #405985;
+  border-radius: 12px;
+  padding: 0 12px;
+  background: #080f1e;
+  color: white;
+  font-size: 20px;
+  font-weight: 850;
+  text-align: right;
+}
+
+.ticket-head input {
+  width: 130px;
+  font-size: 24px;
+  border-color: transparent;
+  background: transparent;
+  padding-right: 0;
+}
+
+.ticket-foot .primary {
+  min-height: 46px;
+  border-radius: 12px;
+  padding: 0 18px;
+  font-size: 18px;
+  background: var(--blue);
+  border-color: var(--blue);
+}
+
+.market-footer {
+  margin: auto -32px 0;
+  padding: 20px 32px;
+  min-height: 96px;
+  background: linear-gradient(180deg, #18233b, #131d33);
+  border-top: 1px solid var(--line);
+}
+
+.market-footer div {
+  display: grid;
+  gap: 4px;
+}
+
+.market-footer div:last-child {
+  text-align: right;
+}
+
+.market-footer span {
+  color: var(--muted);
+  font-size: 19px;
+  font-weight: 650;
+}
+
+.market-footer strong {
+  color: #bdcbeb;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.resolve-button {
+  position: absolute;
+  left: 50%;
+  bottom: -45px;
+  width: 74px;
+  min-height: 74px;
+  padding: 0;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  color: white;
+  background: #192644;
+  border-color: #486394;
+  font-size: 44px;
+  font-weight: 400;
+}
+
+.stats-grid,
+.title,
+.odds,
+.odds-box,
+.market-meta,
+.market-card .desc {
+  display: none;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+  margin-bottom: 22px;
+}
+
+.topbar .primary {
+  min-height: 52px;
+  font-size: 18px;
+  padding: 0 18px;
+}
+
+.side-block {
+  padding: 24px;
+  margin-bottom: 16px;
+}
+
+.side-block h3,
+.modal h3 {
+  margin: 0 0 14px;
+}
+
+.social-rail {
+  display: none;
+}
+
+.mini-list {
+  display: grid;
+  gap: 12px;
+}
+
+.avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  color: white;
+  font-weight: 900;
+  flex: 0 0 auto;
+}
+
+.avatar.green {
+  background: #2458a8;
+}
+
+.avatar.blue {
+  background: #2e68bd;
+}
+
+.avatar.gold {
+  background: #315fbd;
+}
+
+.avatar.violet {
+  background: #274993;
+}
+
+.profile-line,
+.dm-row,
+.leader-row {
+  justify-content: flex-start;
+}
+
+.profile-line div,
+.dm-row div,
+.leader-row div {
+  min-width: 0;
+}
+
+.profile-line strong,
+.dm-row strong,
+.leader-row strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-line span,
+.dm-row span,
+.leader-row span {
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.leader-row {
+  display: grid;
+  grid-template-columns: 28px 44px 1fr auto;
+}
+
+.season-pot,
+.cosmetic {
+  padding: 18px;
+  border-radius: 18px;
+  background: #17213a;
+  border: 1px solid var(--line);
+}
+
+.season-pot strong {
+  display: block;
+  font-size: 34px;
+}
+
+.profile-card {
+  padding: 24px;
+}
+
+.hero-profile {
+  display: grid;
+  grid-template-columns: 70px 1fr;
+  gap: 14px;
+  align-items: center;
+}
+
+.hero-profile .avatar {
+  width: 70px;
+  height: 70px;
+  font-size: 24px;
+}
+
+.badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.receipt {
+  color: white;
+  border: 0;
+  padding: 24px;
+  background:
+    linear-gradient(135deg, rgba(59, 130, 255, 0.92), rgba(8, 18, 38, 0.94)),
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.1) 0 1px, transparent 1px 8px);
+}
+
+.receipt h3 {
+  font-size: 36px;
+  margin: 8px 0;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 14px 14px 0;
+  background: rgba(0, 0, 0, 0.72);
+  z-index: 60;
+}
+
+.modal {
+  position: relative;
+  width: min(840px, 100%);
+  max-height: min(860px, 96vh);
+  overflow: auto;
+  padding: 38px 40px 28px;
+  border-radius: 38px 38px 0 0;
+  background: #101725;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+}
+
+.modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 24px;
+  line-height: 1;
+}
+
+.modal-close:hover {
+  color: white;
+  border-color: #405985;
+}
+
+.sheet-grabber {
+  width: 72px;
+  height: 8px;
+  border-radius: 999px;
+  background: #303a4b;
+  margin: 0 auto 40px;
+}
+
+.modal-intro {
+  margin-bottom: 34px;
+}
+
+.modal-intro h3 {
+  margin: 0 0 8px;
+  color: white;
+  font-size: 38px;
+  line-height: 1;
+  letter-spacing: 0;
+  font-weight: 850;
+}
+
+.modal-intro p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 25px;
+  font-weight: 650;
+  letter-spacing: 0;
+}
+
+.new-market-form {
+  display: grid;
+  gap: 20px;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+}
+
+.field.wide {
+  grid-column: 1 / -1;
+}
+
+.field span:first-child {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  border: 1px solid #454d55;
+  border-radius: 10px;
+  background: #30302d;
+  color: white;
+  font-weight: 650;
+  letter-spacing: 0;
+}
+
+.field textarea {
+  min-height: 160px;
+  resize: vertical;
+  padding: 18px 24px;
+  font-size: 31px;
+  line-height: 1.25;
+}
+
+.field textarea::placeholder,
+.field input::placeholder {
+  color: rgba(255, 255, 255, 0.42);
+  font-weight: 650;
+  opacity: 1;
+}
+
+.field input,
+.field select {
+  min-height: 72px;
+  padding: 0 26px;
+  font-size: 31px;
+  font-weight: 750;
+}
+
+.date-field {
+  position: relative;
+}
+
+.date-field input {
+  padding-right: 72px;
+}
+
+.date-field > .calendar-trigger {
+  position: absolute;
+  right: 18px;
+  top: 50%;
+  width: 38px;
+  height: 38px;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  color: #11131a;
+  background: transparent;
+  border: 0;
+}
+
+.date-field > .calendar-trigger svg {
+  width: 28px;
+  height: 28px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.calendar-popover {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  right: 0;
+  z-index: 5;
+  padding: 16px;
+  border: 1px solid #3f5278;
+  border-radius: 18px;
+  background: #111a2c;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.38);
+}
+
+.calendar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.calendar-head strong {
+  color: white;
+  font-size: 18px;
+}
+
+.calendar-head button {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  color: white;
+  background: #17233a;
+  border: 1px solid #30415f;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.calendar-weekdays,
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.calendar-weekdays {
+  margin-bottom: 6px;
+}
+
+.calendar-weekdays span {
+  color: var(--muted);
+  text-align: center;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.calendar-grid button {
+  aspect-ratio: 1;
+  border-radius: 10px;
+  color: white;
+  background: #172033;
+  border: 1px solid transparent;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.calendar-grid button:disabled {
+  opacity: 0;
+  cursor: default;
+}
+
+.calendar-grid button.selected,
+.calendar-grid button:hover:not(:disabled) {
+  color: white;
+  background: var(--blue);
+  border-color: var(--blue-2);
+}
+
+.field select {
+  appearance: auto;
+}
+
+.resolution-block {
+  display: grid;
+  gap: 14px;
+}
+
+.resolution-block > span {
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 2.2px;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.resolution-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.resolution-options button {
+  min-height: 64px;
+  border-radius: 18px;
+  border: 1px solid #30415f;
+  color: var(--muted);
+  background: #171f30;
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.resolution-options button.active {
+  color: var(--blue-2);
+  border-color: #275a9f;
+  background: #132744;
+}
+
+.starting-odds-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 14px;
+  min-height: 64px;
+  padding: 0 18px;
+  border-radius: 18px;
+  background: #171f30;
+  border: 1px solid #30415f;
+}
+
+.starting-odds-row strong {
+  color: white;
+  font-size: 17px;
+  white-space: nowrap;
+}
+
+.starting-odds-row input {
+  width: 100%;
+  accent-color: var(--blue);
+}
+
+.creation-cost {
+  min-height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 28px;
+  border-radius: 18px;
+  background: #182133;
+  border: 1px solid #263753;
+}
+
+.creation-cost span {
+  color: var(--muted);
+  font-size: 24px;
+  font-weight: 500;
+}
+
+.creation-cost strong {
+  color: var(--blue-2);
+  font-size: 24px;
+  font-weight: 850;
+}
+
+.creation-cost input {
+  width: 130px;
+  min-height: 46px;
+  border: 1px solid #30415f;
+  border-radius: 12px;
+  padding: 0 12px;
+  color: white;
+  background: #101722;
+  font-size: 22px;
+  font-weight: 900;
+  text-align: right;
+}
+
+.post-market-button {
+  width: 100%;
+  min-height: 68px;
+  border-radius: 16px;
+  color: white;
+  background: #101722;
+  border: 1px solid #45516a;
+  font-size: 28px;
+  font-weight: 900;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.icon-button {
+  min-height: 42px;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--muted);
+  padding: 0 12px;
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 22px;
+  transform: translateX(-50%);
+  background: white;
+  color: #101522;
+  border-radius: 999px;
+  padding: 12px 16px;
+  box-shadow: var(--shadow);
+  z-index: 30;
+  font-weight: 800;
+}
+
+@media (max-width: 700px) {
+  .shell {
+    padding: 20px 16px 116px;
+  }
+
+  .phone-status {
+    font-size: 20px;
+    margin-bottom: 24px;
+  }
+
+  .brand h1 {
+    font-size: 48px;
+  }
+
+  .head-actions {
+    gap: 12px;
+  }
+
+  .credit-pill {
+    min-height: 56px;
+    min-width: 132px;
+    padding: 7px 14px;
+  }
+
+  .bell {
+    min-height: 56px;
+    width: 64px;
+  }
+
+  .nav button {
+    min-height: 48px;
+    font-size: 13px;
+  }
+
+  .credit-card {
+    min-height: 190px;
+    padding: 30px 28px;
+  }
+
+  .credits {
+    font-size: 47px;
+  }
+
+  .credit-card .subtle {
+    font-size: 22px;
+  }
+
+  .market-card {
+    border-radius: 28px;
+    padding: 32px 32px 0;
+  }
+
+  .market-card h3 {
+    font-size: 29px;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 470px) {
+  .shell {
+    padding-inline: 14px;
+  }
+
+  .app-head {
+    align-items: flex-start;
+  }
+
+  .brand h1 {
+    font-size: 42px;
+  }
+
+  .credit-pill {
+    min-height: 48px;
+    min-width: 112px;
+    padding: 6px 10px;
+    border-radius: 14px;
+  }
+
+  .credit-pill span {
+    font-size: 10px;
+  }
+
+  .credit-pill strong {
+    font-size: 17px;
+  }
+
+  .bell {
+    min-height: 48px;
+    width: 52px;
+    border-radius: 14px;
+    font-size: 21px;
+  }
+
+  .nav {
+    bottom: 12px;
+    width: min(calc(100% - 14px), 760px);
+    min-height: 58px;
+    border-radius: 18px;
+    grid-template-columns: 1fr 1fr 48px 1fr 1.2fr;
+    gap: 3px;
+    padding: 5px;
+  }
+
+  .nav button {
+    min-height: 44px;
+    font-size: 11px;
+    padding: 0 2px;
+  }
+
+  .nav .create-tab {
+    width: 48px;
+    min-height: 48px;
+    margin-top: -14px;
+    border-radius: 16px;
+    font-size: 28px;
+  }
+
+  .credit-card {
+    min-height: 150px;
+    padding: 24px 22px;
+  }
+
+  .streak-label,
+  .section-head h2,
+  .section-head button {
+    font-size: 18px;
+  }
+
+  .credits {
+    font-size: 38px;
+  }
+
+  .credit-card .subtle {
+    font-size: 16px;
+  }
+
+  .primary,
+  .secondary,
+  .trade-button,
+  .resolve-button {
+    min-height: 54px;
+    font-size: 20px;
+  }
+
+  .market-card {
+    min-height: 360px;
+    padding: 24px 20px 0;
+    gap: 18px;
+  }
+
+  .market-card h3 {
+    font-size: 24px;
+  }
+
+  .odds-line {
+    font-size: 20px;
+  }
+
+  .market-footer {
+    margin-inline: -20px;
+    padding: 16px 20px;
+  }
+
+  .market-footer span {
+    font-size: 15px;
+  }
+
+  .market-footer strong {
+    font-size: 19px;
+  }
+
+  .modal {
+    padding: 34px 26px 24px;
+    border-radius: 30px 30px 0 0;
+  }
+
+  .sheet-grabber {
+    margin-bottom: 34px;
+  }
+
+  .modal-intro {
+    margin-bottom: 28px;
+  }
+
+  .modal-intro h3 {
+    font-size: 38px;
+  }
+
+  .modal-intro p {
+    font-size: 24px;
+  }
+
+  .field textarea {
+    min-height: 150px;
+    font-size: 26px;
+    padding: 18px 22px;
+  }
+
+  .field input,
+  .field select {
+    min-height: 72px;
+    font-size: 26px;
+    padding-inline: 22px;
+  }
+
+  .resolution-block > span {
+    font-size: 23px;
+  }
+
+  .resolution-options {
+    gap: 10px;
+  }
+
+  .resolution-options button {
+    min-height: 64px;
+    font-size: 15px;
+    white-space: nowrap;
+  }
+
+  .starting-odds-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .starting-odds-row strong {
+    font-size: 15px;
+  }
+
+  .creation-cost span,
+  .creation-cost strong {
+    font-size: 22px;
+  }
+}
+
+/* Light feed redesign */
+:root {
+  color-scheme: light;
+  --bg: #f8f7f1;
+  --panel: #ffffff;
+  --panel-2: #f4f1e9;
+  --line: #e4dfd4;
+  --ink: #181b26;
+  --muted: #697183;
+  --blue: #6f55ff;
+  --blue-2: #7f68ff;
+  --green: #22c381;
+  --red: #ff4568;
+  --gold: #ffb629;
+  --shadow: 0 12px 30px rgba(36, 30, 20, 0.08);
+}
+
+body {
+  color: var(--ink);
+  background: var(--bg);
+}
+
+.shell {
+  width: min(100%, 950px);
+  padding: 0 24px 118px;
+}
+
+.app-head {
+  height: 76px;
+  margin: 0 -24px 24px;
+  padding: 0 26px;
+  background: #fffdf7;
+  border-bottom: 1px solid var(--line);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-mark {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  color: white;
+  background: var(--blue);
+  font-weight: 950;
+  font-size: 26px;
+}
+
+.brand h1 {
+  display: block;
+  color: var(--ink);
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-style: normal;
+  font-size: 29px;
+  font-weight: 950;
+}
+
+.brand h1 span {
+  color: var(--blue);
+}
+
+.head-actions {
+  gap: 14px;
+}
+
+.credit-pill {
+  min-width: 112px;
+  min-height: 46px;
+  padding: 0 14px;
+  display: flex;
+  gap: 10px;
+  border-radius: 999px;
+  background: white;
+  border: 1px solid var(--line);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.04);
+}
+
+.credit-pill span {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #7a4a00;
+  background: var(--gold);
+  font-size: 14px;
+  letter-spacing: 0;
+}
+
+.credit-pill strong {
+  color: var(--ink);
+  font-size: 20px;
+}
+
+.bell,
+.profile-dot {
+  width: 44px;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  box-shadow: none;
+  font-weight: 900;
+}
+
+.bell {
+  font-size: 26px;
+}
+
+.profile-dot {
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: white;
+  background: var(--blue);
+}
+
+.hero-card {
+  position: relative;
+  min-height: 170px;
+  margin-bottom: 18px;
+  padding: 24px;
+  display: block;
+  color: white;
+  border: 0;
+  border-radius: 30px;
+  background:
+    radial-gradient(circle at 10% 20%, rgba(255, 255, 255, 0.12) 0 1px, transparent 1px 7px),
+    #19392e;
+  box-shadow: none;
+}
+
+.hero-dismiss {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 24px;
+  line-height: 1;
+}
+
+.hero-dismiss:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.hero-card::after {
+  content: "call it.";
+  float: right;
+  margin-top: -96px;
+  color: rgba(255, 255, 255, 0.45);
+  font-family: Georgia, serif;
+  font-size: 28px;
+  font-style: italic;
+}
+
+.streak-label {
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 16px;
+  letter-spacing: 5px;
+}
+
+.hero-card .credits {
+  max-width: 720px;
+  margin-top: 8px;
+  color: white;
+  font-size: 25px;
+  line-height: 1.15;
+}
+
+.hero-card .subtle {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 16px;
+  margin: 8px 0 0;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.hero-actions .primary,
+.hero-actions .secondary {
+  min-height: 44px;
+  border-radius: 15px;
+  padding: 0 18px;
+  font-size: 16px;
+}
+
+.hero-actions .primary {
+  color: var(--ink);
+  background: white;
+  border: 0;
+}
+
+.hero-actions .secondary {
+  color: white;
+  background: rgba(255, 255, 255, 0.16);
+  border: 0;
+}
+
+.section-head {
+  display: none;
+}
+
+.market-grid {
+  gap: 20px;
+}
+
+.market-card {
+  min-height: 0;
+  padding: 22px 22px 22px;
+  gap: 12px;
+  overflow: visible;
+  color: var(--ink);
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 26px;
+  box-shadow: var(--shadow);
+}
+
+.market-card::before,
+.market-card::after {
+  display: none;
+}
+
+.market-top {
+  align-items: flex-start;
+}
+
+.market-community {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.community-icon {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: linear-gradient(135deg, #b74fff, #704dff);
+  font-size: 20px;
+}
+
+.market-community strong {
+  display: block;
+  font-size: 17px;
+  line-height: 1.1;
+}
+
+.market-community span,
+.time-left {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.time-left {
+  color: var(--red);
+  font-weight: 800;
+}
+
+.question-kicker {
+  margin: 8px 0 -4px;
+  font-size: 20px;
+}
+
+.market-card h3 {
+  color: var(--ink);
+  font-size: 25px;
+  line-height: 1.12;
+  margin: 0;
+}
+
+.tag-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.tag-row span {
+  padding: 8px 13px;
+  border-radius: 999px;
+  color: #575d69;
+  background: #efede6;
+  font-weight: 850;
+  font-size: 15px;
+}
+
+.odds-line {
+  margin-top: 12px;
+  align-items: flex-end;
+}
+
+.big-price {
+  display: inline-block;
+  color: var(--ink);
+  font-size: 39px;
+  line-height: 1;
+}
+
+.odds-line span {
+  margin-left: 10px;
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.odds-line p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 16px;
+}
+
+.spark-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.sparkline {
+  width: 180px;
+  height: 92px;
+  padding: 4px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #fffdf8, #f7f4ed);
+}
+
+.spark-button:hover .sparkline {
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.sparkline path {
+  fill: none;
+  stroke: var(--blue);
+  stroke-width: 3.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sparkline .axis-label {
+  fill: #9a9284;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.sparkline .percent-label {
+  fill: #8b8377;
+}
+
+.sparkline .spark-area {
+  stroke: none;
+  fill: rgba(111, 85, 255, 0.1);
+}
+
+.sparkline.up path {
+  stroke: var(--green);
+}
+
+.sparkline.up .spark-area {
+  fill: rgba(34, 195, 129, 0.13);
+}
+
+.sparkline.even path {
+  stroke: var(--blue);
+}
+
+.sparkline.even .spark-area {
+  fill: rgba(111, 85, 255, 0.12);
+}
+
+.sparkline.down path {
+  stroke: var(--red);
+}
+
+.sparkline.down .spark-area {
+  fill: rgba(255, 69, 104, 0.12);
+}
+
+.profile-card {
+  color: var(--ink);
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 26px;
+  box-shadow: var(--shadow);
+}
+
+.hero-profile .avatar {
+  background: var(--blue);
+}
+
+.profile-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.profile-stats div {
+  padding: 16px;
+  border-radius: 16px;
+  background: #f7f4ed;
+  border: 1px solid var(--line);
+}
+
+.profile-stats span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.profile-stats strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--ink);
+  font-size: 24px;
+}
+
+.receipt {
+  color: var(--ink);
+  border: 1px solid var(--line);
+  background:
+    radial-gradient(circle at 85% 10%, rgba(255, 182, 41, 0.18), transparent 9rem),
+    white;
+  box-shadow: var(--shadow);
+}
+
+.receipt.loss {
+  background:
+    radial-gradient(circle at 85% 10%, rgba(255, 69, 104, 0.14), transparent 9rem),
+    white;
+}
+
+.receipt.win h3 {
+  color: var(--green);
+}
+
+.receipt.loss h3 {
+  color: var(--red);
+}
+
+.history-toggle {
+  width: 100%;
+  min-height: 54px;
+  border-radius: 16px;
+  color: var(--blue);
+  background: white;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.chart-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(24, 27, 38, 0.52);
+}
+
+.chart-modal {
+  position: relative;
+  width: min(720px, 100%);
+  padding: 26px;
+  border-radius: 28px;
+  background: white;
+  border: 1px solid var(--line);
+  box-shadow: 0 28px 90px rgba(25, 25, 28, 0.24);
+}
+
+.chart-modal h3 {
+  margin: 6px 0 18px;
+  color: var(--ink);
+  font-size: 24px;
+}
+
+.chart-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  color: var(--muted);
+  background: #f4f1e9;
+  font-size: 24px;
+}
+
+.sparkline.expanded {
+  width: 100%;
+  height: 340px;
+  padding: 16px;
+  border-radius: 22px;
+}
+
+.sparkline.expanded path {
+  stroke-width: 2.2;
+}
+
+.sparkline.expanded .axis-label {
+  font-size: 6px;
+}
+
+.feed-bar {
+  display: none;
+}
+
+.trade-controls {
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.trade-button {
+  min-height: 50px;
+  border: 0;
+  border-radius: 14px;
+  color: white;
+  background: var(--green);
+  box-shadow: 0 10px 18px rgba(34, 195, 129, 0.18);
+  font-size: 19px;
+}
+
+.trade-button:nth-child(2) {
+  background: var(--red);
+  box-shadow: 0 10px 18px rgba(255, 69, 104, 0.18);
+}
+
+.trade-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+  box-shadow: none;
+}
+
+.trade-button.even,
+.trade-button.even:nth-child(2) {
+  background: var(--blue);
+  box-shadow: 0 10px 18px rgba(111, 85, 255, 0.2);
+}
+
+.trade-ticket {
+  background: #f8f7f1;
+  border-color: var(--line);
+}
+
+.pool-breakdown {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.pool-breakdown div {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #f7f4ed;
+  border: 1px solid var(--line);
+}
+
+.pool-breakdown span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.pool-breakdown strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--ink);
+  font-size: 19px;
+}
+
+.resolve-controls {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.resolve-controls button,
+.resolve-controls span {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 14px;
+  border-radius: 999px;
+  color: #596171;
+  background: #f1eee7;
+  border: 1px solid var(--line);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.resolve-controls button:first-child {
+  color: #0f8b58;
+}
+
+.resolve-controls button:nth-child(2) {
+  color: #d93052;
+}
+
+.ticket-head input,
+.trade-ticket input[type="number"] {
+  color: var(--ink);
+  background: white;
+  border-color: var(--line);
+}
+
+.ticket-head span,
+.trade-ticket label span,
+.ticket-foot span {
+  color: var(--muted);
+}
+
+.market-footer,
+.resolve-button,
+.market-card .bar:not(.feed-bar) {
+  display: none;
+}
+
+.nav {
+  width: min(calc(100% - 40px), 900px);
+  min-height: 86px;
+  bottom: 20px;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0;
+  padding: 8px 20px;
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid var(--line);
+  box-shadow: 0 18px 40px rgba(45, 38, 28, 0.14);
+}
+
+.nav button {
+  min-height: 62px;
+  display: grid;
+  place-items: center;
+  gap: 3px;
+  color: #555d6c;
+  background: transparent;
+  font-size: 24px;
+}
+
+.nav button span {
+  display: block;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.nav button.active {
+  color: var(--blue);
+  background: transparent;
+  box-shadow: none;
+}
+
+.nav .create-tab {
+  width: 74px;
+  min-height: 74px;
+  margin: -32px auto 0;
+  border-radius: 50%;
+  background: var(--blue);
+  border: 0;
+  box-shadow: 0 14px 34px rgba(111, 85, 255, 0.34);
+  font-size: 42px;
+}
+
+.modal {
+  background: white;
+  color: var(--ink);
+}
+
+.modal-intro h3,
+.post-market-button {
+  color: var(--ink);
+}
+
+.modal-intro p,
+.resolution-block > span,
+.creation-cost span {
+  color: var(--muted);
+}
+
+.field input,
+.field select,
+.field textarea {
+  color: #11131a;
+  background: #f0eee8;
+  border-color: #d7d2c7;
+}
+
+.field textarea,
+.field textarea::placeholder,
+.date-field input,
+.date-field input::placeholder {
+  color: #11131a;
+}
+
+.resolution-block > span,
+.resolution-options button {
+  color: white;
+}
+
+.calendar-popover {
+  background: white;
+  border-color: var(--line);
+}
+
+.calendar-head strong {
+  color: #11131a;
+}
+
+.calendar-grid button,
+.calendar-head button {
+  color: #11131a;
+  background: #f4f1e9;
+}
+
+.calendar-weekdays span {
+  color: #11131a;
+}
+
+.creation-cost span,
+.creation-cost strong {
+  color: white;
+}
+
+.post-market-button {
+  color: white;
+}
+
+@media (max-width: 520px) {
+  .shell {
+    padding-inline: 14px;
+  }
+
+  .app-head {
+    margin-inline: -14px;
+    padding-inline: 18px;
+  }
+
+  .brand h1 {
+    font-size: 28px;
+  }
+
+  .brand-mark {
+    width: 42px;
+    height: 42px;
+  }
+
+  .hero-card {
+    padding: 22px;
+  }
+
+  .hero-card .credits {
+    font-size: 23px;
+  }
+
+  .hero-card .subtle {
+    font-size: 15px;
+  }
+
+  .hero-actions {
+    flex-wrap: wrap;
+  }
+
+  .market-card h3 {
+    font-size: 23px;
+  }
+
+  .nav {
+    width: min(calc(100% - 18px), 900px);
+    min-height: 80px;
+    padding-inline: 10px;
+  }
+}
