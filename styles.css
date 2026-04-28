@@ -2028,7 +2028,7 @@ body {
 
 .community-create-card {
   display: grid;
-  grid-template-columns: 1fr 140px auto;
+  grid-template-columns: 1fr;
   gap: 12px;
   margin-bottom: 20px;
   padding: 16px;
@@ -2068,7 +2068,8 @@ body {
 }
 
 .community-create-card .primary {
-  align-self: end;
+  width: 100%;
+  align-self: stretch;
   min-height: 48px;
   padding: 0 22px;
   border-radius: 14px;
@@ -2165,12 +2166,6 @@ body {
 .friend-bet-list {
   display: grid;
   gap: 10px;
-}
-
-@media (max-width: 620px) {
-  .community-create-card {
-    grid-template-columns: 1fr;
-  }
 }
 
 .friend-bet-list button {

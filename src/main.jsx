@@ -885,18 +885,21 @@ function FriendsView({
             required
           />
         </label>
-        <button className="primary">Add</button>
+        <button type="submit" className="primary">Add</button>
       </form>
       <form className="community-create-card" onSubmit={onCreateCommunity}>
         <label>
           <span>Create community</span>
           <input value={communityName} placeholder="Community name" onChange={(event) => setCommunityName(event.target.value)} required />
         </label>
-        <select value={communityType} onChange={(event) => setCommunityType(event.target.value)}>
-          <option>Private</option>
-          <option>Public</option>
-        </select>
-        <button className="primary">Create</button>
+        <label>
+          <span>Type</span>
+          <select value={communityType} onChange={(event) => setCommunityType(event.target.value)}>
+            <option>Private</option>
+            <option>Public</option>
+          </select>
+        </label>
+        <button type="submit" className="primary">Create</button>
       </form>
       <label className="community-search">
         <span>Search communities</span>
@@ -1791,11 +1794,7 @@ function App() {
     const name = communityName.trim();
     if (!name) return;
     const type = communityType;
-    const cost = type === "Public" ? 500 : 200;
-    if (credits < cost) {
-      toast(`${type} communities cost ${cost}.`);
-      return;
-    }
+    const cost = 0;
     if (supabase && userProfile) {
       const { data, error } = await supabase
         .from("communities")
@@ -1813,20 +1812,22 @@ function App() {
         toast(error.message);
         return;
       }
-      await supabase.from("community_members").insert({
+      const { error: memberError } = await supabase.from("community_members").insert({
         community_id: data.id,
         profile_id: userProfile.id,
         role: "creator",
       });
+      if (memberError) {
+        toast(memberError.message);
+      }
       const nextCommunity = communityFromRow(data);
       setCommunities((current) => [nextCommunity, ...current]);
       setSelectedCommunityId(nextCommunity.id);
     } else {
       setCommunities((current) => [{ id: crypto.randomUUID(), name, type, members: 1, pnl: 0, seasonPot: 0 }, ...current]);
     }
-    await saveCredits(credits >= INFINITE_CREDITS ? credits : credits - cost);
     setCommunityName("");
-    toast(`${type} community created for ${cost}.`);
+    toast(`${type} community created.`);
   }
 
   function daily() {
