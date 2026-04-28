@@ -149,6 +149,104 @@ function axisDates(createdAt, now = new Date()) {
   };
 }
 
+function profileFromUser(user) {
+  const displayName = user?.user_metadata?.display_name || user?.email?.split("@")[0] || "Chalk user";
+  const handleBase = displayName.toLowerCase().replace(/[^a-z0-9]+/g, "").slice(0, 18) || "chalkuser";
+  return {
+    id: user.id,
+    handle: `${handleBase}${user.id.slice(0, 4)}`,
+    display_name: displayName,
+    credits: 0,
+  };
+}
+
+function appStatus(status) {
+  const labels = {
+    pending_approval: "Pending approval",
+    live: "Live",
+    closed: "Closed",
+    resolved: "Resolved",
+    disputed: "Disputed",
+  };
+  return labels[status] || "Live";
+}
+
+function dbStatus(status) {
+  const labels = {
+    "Pending approval": "pending_approval",
+    Live: "live",
+    Closed: "closed",
+    Resolved: "resolved",
+    Disputed: "disputed",
+  };
+  return labels[status] || "live";
+}
+
+function dbResolver(resolver) {
+  const labels = {
+    Vote: "community_vote",
+    Creator: "creator",
+    "Third party": "third_party",
+  };
+  return labels[resolver] || "community_vote";
+}
+
+function appResolver(resolver) {
+  const labels = {
+    community_vote: "Vote",
+    creator: "Creator",
+    third_party: "Third party",
+    app_approved: "App approved",
+  };
+  return labels[resolver] || "Vote";
+}
+
+function marketFromRow(row) {
+  const yesPool = row.yes_pool ?? Math.round(((row.volume ?? 0) * (row.yes_price ?? 50)) / 100);
+  const noPool = row.no_pool ?? Math.max(0, (row.volume ?? 0) - yesPool);
+  return {
+    id: row.id,
+    title: row.title,
+    description: row.description || "Created from Chalk.",
+    community: row.community_id ? "Community" : "No community",
+    privacy: row.community_id ? "Private" : "Public",
+    resolver: appResolver(row.resolver_mode),
+    closes: row.close_at ? formatDateInput(new Date(row.close_at)) : "TBD",
+    status: appStatus(row.status),
+    outcome: row.outcome,
+    yesPool,
+    noPool,
+    yes: marketProbability(yesPool, noPool),
+    seedPool: row.seed_pool ?? yesPool + noPool,
+    volume: row.volume ?? yesPool + noPool,
+    traders: row.traders ?? 0,
+    history: row.history?.length ? row.history : [marketProbability(yesPool, noPool)],
+    createdAt: row.created_at?.slice(0, 10) || new Date().toISOString().slice(0, 10),
+    creator: row.creator_name || "Chalk user",
+  };
+}
+
+function positionFromRow(row) {
+  return {
+    id: row.id,
+    marketId: row.market_id,
+    title: row.title_snapshot,
+    community: row.community_snapshot,
+    side: row.side,
+    amount: row.amount,
+    entryPrice: row.average_price,
+    payout: row.payout,
+    status: appStatus(row.status),
+    outcome: row.outcome,
+    finalPayout: row.final_payout,
+    profit: row.profit,
+  };
+}
+
+function formatDateInput(date) {
+  return `${String(date.getMonth() + 1).padStart(2, "0")}/${String(date.getDate()).padStart(2, "0")}/${date.getFullYear()}`;
+}
+
 function Avatar({ person, initials, color = "violet" }) {
   return <div className={`avatar ${color}`}>{initials || person?.initials}</div>;
 }
@@ -203,7 +301,7 @@ function MarketCard({ market, onBuy, onResolve }) {
     setAmount(String(Math.min(5000, Math.max(0, nextAmount))));
   }
 
-  function submitTrade() {
+  async function submitTrade() {
     if (!ticket) return;
     if (!Number.isFinite(numericAmount) || numericAmount < MIN_TRADE_AMOUNT) {
       setTicketError("Minimum bet is 50.");
@@ -213,7 +311,7 @@ function MarketCard({ market, onBuy, onResolve }) {
       setTicketError("Payout must be at least your bet.");
       return;
     }
-    const placed = onBuy(market.id, ticket, numericAmount);
+    const placed = await onBuy(market.id, ticket, numericAmount);
     if (!placed) return;
     setTicket(null);
     setTicketError("");
@@ -725,28 +823,36 @@ function GroupsView({ communities, onCreateCommunity, toast }) {
   );
 }
 
-function ProfileView({ positions }) {
+function ProfileView({ positions, userProfile }) {
   const [showHistory, setShowHistory] = useState(false);
   const resolvedBets = positions.filter((position) => position.status === "Resolved");
   const wins = resolvedBets.filter((position) => position.profit > 0);
   const winRate = resolvedBets.length ? Math.round((wins.length / resolvedBets.length) * 100) : 0;
   const totalVolume = positions.reduce((sum, position) => sum + position.amount, 0);
   const netProfit = resolvedBets.reduce((sum, position) => sum + (position.profit ?? 0), 0);
+  const displayName = userProfile?.display_name || profile.name;
+  const handle = userProfile?.handle ? `@${userProfile.handle}` : profile.handle;
+  const initials = displayName
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <section>
       <div className="topbar">
         <div className="title">
-          <h2>{profile.name}</h2>
-          <p>{profile.handle}</p>
+          <h2>{displayName}</h2>
+          <p>{handle}</p>
         </div>
       </div>
       <div className="market-grid">
         <article className="profile-card">
           <div className="hero-profile">
-            <Avatar initials={profile.initials} color="violet" />
+            <Avatar initials={initials || profile.initials} color="violet" />
             <div>
-              <h3>{profile.name} <span className="subtle">{profile.handle}</span></h3>
+              <h3>{displayName} <span className="subtle">{handle}</span></h3>
               <p className="subtle">Record {wins.length}-{Math.max(0, resolvedBets.length - wins.length)} · {winRate}% win rate</p>
             </div>
           </div>
@@ -945,6 +1051,8 @@ function SocialRail() {
 function App() {
   const [session, setSession] = useState(null);
   const [authReady, setAuthReady] = useState(false);
+  const [dataReady, setDataReady] = useState(false);
+  const [userProfile, setUserProfile] = useState(null);
   const [view, setView] = useState("markets");
   const [tab, setTab] = useState("all");
   const [search, setSearch] = useState("");
@@ -975,6 +1083,71 @@ function App() {
     return () => data.subscription.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    if (!session?.user) {
+      setDataReady(false);
+      setUserProfile(null);
+      setMarkets(initialMarkets);
+      setPositions([]);
+      return;
+    }
+    loadAppData(session.user);
+  }, [session]);
+
+  async function loadAppData(user) {
+    if (!supabase) {
+      setDataReady(true);
+      return;
+    }
+
+    setDataReady(false);
+    const profileDraft = profileFromUser(user);
+    const { data: existingProfile, error: profileError } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    let nextProfile = existingProfile;
+    if (!nextProfile && !profileError) {
+      const { data: createdProfile, error: createError } = await supabase
+        .from("profiles")
+        .insert(profileDraft)
+        .select("*")
+        .single();
+      if (createError) {
+        toast(createError.message);
+      } else {
+        nextProfile = createdProfile;
+      }
+    }
+
+    if (nextProfile) {
+      setUserProfile(nextProfile);
+      setCredits(nextProfile.credits ?? 0);
+    }
+
+    const [{ data: marketRows, error: marketsError }, { data: positionRows, error: positionsError }] =
+      await Promise.all([
+        supabase.from("markets").select("*").order("created_at", { ascending: false }),
+        supabase.from("positions").select("*").eq("profile_id", user.id).order("created_at", { ascending: false }),
+      ]);
+
+    if (marketsError) toast(marketsError.message);
+    if (positionsError) toast(positionsError.message);
+    setMarkets((marketRows ?? []).map(marketFromRow));
+    setPositions((positionRows ?? []).map(positionFromRow));
+    setDataReady(true);
+  }
+
+  async function saveCredits(nextCredits) {
+    setCredits(nextCredits);
+    if (supabase && userProfile && nextCredits < INFINITE_CREDITS) {
+      await supabase.from("profiles").update({ credits: nextCredits }).eq("id", userProfile.id);
+      setUserProfile((current) => (current ? { ...current, credits: nextCredits } : current));
+    }
+  }
+
   async function signOut() {
     if (supabase) await supabase.auth.signOut();
     setSession(null);
@@ -986,7 +1159,7 @@ function App() {
     window.chalkToast = window.setTimeout(() => setToastText(""), 2400);
   }
 
-  function buy(marketId, side, amount = TRADE_CREDITS) {
+  async function buy(marketId, side, amount = TRADE_CREDITS) {
     const tradeAmount = Number(amount);
     if (!Number.isFinite(tradeAmount) || tradeAmount < MIN_TRADE_AMOUNT) {
       toast("Minimum bet is 50.");
@@ -1008,17 +1181,55 @@ function App() {
     }
     const entryPrice = market ? (side === "yes" ? market.yes : 100 - market.yes) : 50;
     const alreadyTraded = positions.some((position) => position.marketId === marketId);
-    setMarkets((current) =>
-      current.map((market) =>
-        market.id === marketId
-          ? {
-              ...buyWithPool(market, side, tradeAmount),
-              traders: alreadyTraded ? market.traders ?? 0 : (market.traders ?? 0) + 1,
-            }
-          : market,
-      ),
-    );
-    if (market) {
+    const updatedMarket = market
+      ? {
+          ...buyWithPool(market, side, tradeAmount),
+          traders: alreadyTraded ? market.traders ?? 0 : (market.traders ?? 0) + 1,
+        }
+      : null;
+
+    if (supabase && updatedMarket && userProfile) {
+      const { error: marketError } = await supabase
+        .from("markets")
+        .update({
+          yes_price: updatedMarket.yes,
+          yes_pool: updatedMarket.yesPool,
+          no_pool: updatedMarket.noPool,
+          volume: updatedMarket.volume,
+          traders: updatedMarket.traders,
+          history: updatedMarket.history,
+        })
+        .eq("id", marketId);
+
+      if (marketError) {
+        toast(marketError.message);
+        return false;
+      }
+
+      const { data: positionRow, error: positionError } = await supabase
+        .from("positions")
+        .insert({
+          market_id: marketId,
+          profile_id: userProfile.id,
+          side,
+          shares: tradeAmount,
+          average_price: entryPrice,
+          amount: tradeAmount,
+          payout,
+          status: "live",
+          title_snapshot: market.title,
+          community_snapshot: market.community,
+        })
+        .select("*")
+        .single();
+
+      if (positionError) {
+        toast(positionError.message);
+        return false;
+      }
+
+      setPositions((current) => [positionFromRow(positionRow), ...current]);
+    } else if (market) {
       setPositions((current) => [
         {
           id: Date.now(),
@@ -1029,34 +1240,31 @@ function App() {
           amount: tradeAmount,
           entryPrice,
           payout,
+          status: "Live",
         },
         ...current,
       ]);
     }
-    setCredits((value) => (value >= INFINITE_CREDITS ? value : value - tradeAmount));
+
+    setMarkets((current) => current.map((item) => (item.id === marketId && updatedMarket ? updatedMarket : item)));
+    await saveCredits(credits >= INFINITE_CREDITS ? credits : credits - tradeAmount);
     toast(`Bought ${tradeAmount.toLocaleString()} of ${side.toUpperCase()} from the pool.`);
     return true;
   }
 
-  function resolveMarket(marketId, outcome) {
+  async function resolveMarket(marketId, outcome) {
     const market = markets.find((item) => item.id === marketId);
     if (!market || !outcome) return;
     const yesPool = market.yesPool ?? Math.round((market.volume * market.yes) / 100);
     const noPool = market.noPool ?? market.volume - yesPool;
     const totalPool = yesPool + noPool;
     const winningPool = outcome === "yes" ? yesPool : noPool;
-    setMarkets((current) =>
-      current.map((item) => (item.id === marketId ? { ...item, status: "Resolved", outcome } : item)),
-    );
-    let userPayout = 0;
-    setPositions((current) =>
-      current.map((position) => {
+    const nextPositions = positions.map((position) => {
         if (position.marketId !== marketId) return position;
         const finalPayout =
           position.side === outcome && winningPool > 0
             ? Math.round((position.amount / winningPool) * totalPool * (1 - POOL_FEE_RATE))
             : 0;
-        userPayout += finalPayout;
         return {
           ...position,
           status: "Resolved",
@@ -1064,24 +1272,57 @@ function App() {
           finalPayout,
           profit: finalPayout - position.amount,
         };
-      }),
+      });
+    const userPayout = nextPositions
+      .filter((position) => position.marketId === marketId)
+      .reduce((sum, position) => sum + (position.finalPayout ?? 0), 0);
+
+    if (supabase) {
+      const { error: marketError } = await supabase
+        .from("markets")
+        .update({ status: "resolved", outcome })
+        .eq("id", marketId);
+      if (marketError) {
+        toast(marketError.message);
+        return;
+      }
+
+      await Promise.all(
+        nextPositions
+          .filter((position) => position.marketId === marketId)
+          .map((position) =>
+            supabase
+              .from("positions")
+              .update({
+                status: "resolved",
+                outcome,
+                final_payout: position.finalPayout,
+                profit: position.profit,
+              })
+              .eq("id", position.id),
+          ),
+      );
+    }
+
+    setMarkets((current) =>
+      current.map((item) => (item.id === marketId ? { ...item, status: "Resolved", outcome } : item)),
     );
+    setPositions(nextPositions);
     if (userPayout > 0) {
-      setCredits((value) => (value >= INFINITE_CREDITS ? value : value + userPayout));
+      await saveCredits(credits >= INFINITE_CREDITS ? credits : credits + userPayout);
     }
     toast(`Resolved ${outcome.toUpperCase()}. My Bets now shows profit/loss.`);
   }
 
-  function createMarket(draft) {
+  async function createMarket(draft) {
     const seedCost = draft.seedPool ?? MARKET_SEED_POOL;
     if (credits < seedCost) {
       toast(`Seeding this market costs ${seedCost.toLocaleString()}.`);
       return;
     }
     const pools = seededPools(draft.yes, seedCost);
-    setMarkets((current) => [
-      {
-        id: Date.now(),
+    const nextMarket = {
+        id: crypto.randomUUID(),
         ...draft,
         status: draft.privacy === "Public" ? "Pending approval" : "Live",
         yesPool: pools.yesPool,
@@ -1091,11 +1332,43 @@ function App() {
         volume: seedCost,
         traders: 0,
         createdAt: new Date().toISOString().slice(0, 10),
-        creator: "Luca",
-      },
-      ...current,
-    ]);
-    setCredits((value) => (value >= INFINITE_CREDITS ? value : value - seedCost));
+        creator: userProfile?.display_name || session?.user?.email?.split("@")[0] || "Chalk user",
+      };
+
+    if (supabase && userProfile) {
+      const closeDate = parseCloseDate(nextMarket.closes) || new Date(Date.now() + 7 * 86400000);
+      const { data, error } = await supabase
+        .from("markets")
+        .insert({
+          id: nextMarket.id,
+          creator_id: userProfile.id,
+          community_id: null,
+          title: nextMarket.title,
+          description: nextMarket.description,
+          status: dbStatus(nextMarket.status),
+          resolver_mode: dbResolver(nextMarket.resolver),
+          close_at: closeDate.toISOString(),
+          yes_price: nextMarket.yes,
+          yes_pool: nextMarket.yesPool,
+          no_pool: nextMarket.noPool,
+          seed_pool: seedCost,
+          volume: seedCost,
+          traders: 0,
+          history: nextMarket.history,
+          creator_name: nextMarket.creator,
+        })
+        .select("*")
+        .single();
+      if (error) {
+        toast(error.message);
+        return;
+      }
+      setMarkets((current) => [marketFromRow(data), ...current]);
+    } else {
+      setMarkets((current) => [nextMarket, ...current]);
+    }
+
+    await saveCredits(credits >= INFINITE_CREDITS ? credits : credits - seedCost);
     setModal(null);
     toast(`Market posted with a ${seedCost.toLocaleString()} seeded pool.`);
   }
@@ -1134,6 +1407,10 @@ function App() {
     return <AuthGate onSession={setSession} />;
   }
 
+  if (!dataReady) {
+    return <div className="loading-screen">Loading your Chalk account...</div>;
+  }
+
   return (
     <div className="shell">
       <Sidebar
@@ -1150,7 +1427,7 @@ function App() {
         {view === "markets" && <MarketsView markets={markets} tab={tab} setTab={setTab} search={search} setSearch={setSearch} onBuy={buy} onResolve={resolveMarket} />}
         {view === "groups" && <GroupsView communities={communities} onCreateCommunity={createCommunity} toast={toast} />}
         {view === "bets" && <MyBetsView positions={positions} />}
-        {view === "profile" && <ProfileView positions={positions} />}
+        {view === "profile" && <ProfileView positions={positions} userProfile={userProfile} />}
         {view === "dm" && <DmsView setView={setView} toast={toast} />}
         {view === "shop" && <ShopView onBuyCosmetic={buyCosmetic} />}
       </main>
