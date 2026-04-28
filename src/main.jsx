@@ -6,9 +6,9 @@ import "../styles.css";
 const initialMarkets = [];
 
 const initialCommunities = [
-  { name: "Townhouse 4B", type: "Private", members: 18, pnl: 1180, seasonPot: 5400 },
-  { name: "Campus After Dark", type: "Public", members: 1240, pnl: 420, seasonPot: 21800 },
-  { name: "Sunday Group Chat", type: "Private", members: 12, pnl: -90, seasonPot: 1600 },
+  { name: "Townhouse 4B", type: "Private", members: 18, pnl: 1180, seasonPot: 5400, logoKind: "emoji", logoValue: "🏠" },
+  { name: "Campus After Dark", type: "Public", members: 1240, pnl: 420, seasonPot: 21800, logoKind: "emoji", logoValue: "🌙" },
+  { name: "Sunday Group Chat", type: "Private", members: 12, pnl: -90, seasonPot: 1600, logoKind: "emoji", logoValue: "💬" },
 ];
 
 const friends = [
@@ -304,6 +304,8 @@ function communityFromRow(row) {
     members: row.members ?? 1,
     pnl: row.pnl ?? 0,
     seasonPot: row.season_pot ?? 0,
+    logoKind: row.logo_kind || "emoji",
+    logoValue: row.logo_value || "🏠",
   };
 }
 
@@ -330,6 +332,14 @@ function formatDateInput(date) {
 
 function Avatar({ person, initials, color = "violet" }) {
   return <div className={`avatar ${color}`}>{initials || person?.initials}</div>;
+}
+
+function CommunityLogo({ community, large = false }) {
+  const className = `community-logo${large ? " large" : ""}`;
+  if (community.logoKind === "image" && community.logoValue) {
+    return <span className={className}><img src={community.logoValue} alt="" /></span>;
+  }
+  return <span className={className}>{community.logoValue || "🏠"}</span>;
 }
 
 function Pill({ children, tone = "" }) {
@@ -969,6 +979,10 @@ function FriendsView({
   setCommunityName,
   communityType,
   setCommunityType,
+  communityLogoKind,
+  setCommunityLogoKind,
+  communityLogoValue,
+  setCommunityLogoValue,
   selectedCommunityId,
   setSelectedCommunityId,
   communityMessages,
@@ -992,6 +1006,18 @@ function FriendsView({
   const activeCommunity = communities.find((group) => String(group.id) === String(selectedCommunityId));
   const activeMessages = communityMessages.filter((message) => String(message.communityId) === String(selectedCommunityId));
   const activeCommunityMarkets = markets.filter((market) => String(market.communityId) === String(selectedCommunityId));
+  const logoChoices = ["🏠", "🔥", "🏀", "🎲", "📈", "🏆", "💬", "🌙"];
+
+  function handleCommunityLogoUpload(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCommunityLogoKind("image");
+      setCommunityLogoValue(String(reader.result));
+    };
+    reader.readAsDataURL(file);
+  }
 
   if (activeCommunity) {
     return (
@@ -1001,9 +1027,12 @@ function FriendsView({
         </button>
         <article className="market-card community-room">
           <div className="market-top">
-            <div>
-              <h3>{activeCommunity.name}</h3>
-              <p className="subtle">{activeCommunity.type} · {activeCommunity.members} members</p>
+            <div className="community-room-title">
+              <CommunityLogo community={activeCommunity} large />
+              <div>
+                <h3>{activeCommunity.name}</h3>
+                <p className="subtle">{activeCommunity.type} · {activeCommunity.members} members</p>
+              </div>
             </div>
             <Pill tone={activeCommunity.type === "Public" ? "hot" : "good"}>{activeCommunity.type}</Pill>
           </div>
@@ -1080,6 +1109,32 @@ function FriendsView({
           <span>Create community</span>
           <input value={communityName} placeholder="Community name" onChange={(event) => setCommunityName(event.target.value)} required />
         </label>
+        <div className="community-logo-picker">
+          <span>Logo</span>
+          <div className="community-create-preview">
+            <CommunityLogo community={{ logoKind: communityLogoKind, logoValue: communityLogoValue }} />
+            <strong>{communityName || "New community"}</strong>
+          </div>
+          <div className="emoji-options">
+            {logoChoices.map((emoji) => (
+              <button
+                type="button"
+                key={emoji}
+                className={communityLogoKind === "emoji" && communityLogoValue === emoji ? "selected" : ""}
+                onClick={() => {
+                  setCommunityLogoKind("emoji");
+                  setCommunityLogoValue(emoji);
+                }}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+          <label className="logo-upload">
+            <input type="file" accept="image/*" onChange={handleCommunityLogoUpload} />
+            Upload picture
+          </label>
+        </div>
         <label>
           <span>Type</span>
           <select value={communityType} onChange={(event) => setCommunityType(event.target.value)}>
@@ -1146,9 +1201,12 @@ function FriendsView({
               <p className="subtle">No communities match that search.</p>
             ) : (
               filteredCommunities.map((group) => (
-                <button type="button" key={group.id || group.name} onClick={() => setSelectedCommunityId(group.id)}>
-                  <strong>{group.name}</strong>
-                  <span>{group.type} · {group.members} members</span>
+                <button className="community-directory-row" type="button" key={group.id || group.name} onClick={() => setSelectedCommunityId(group.id)}>
+                  <CommunityLogo community={group} />
+                  <span>
+                    <strong>{group.name}</strong>
+                    <small>{group.type} · {group.members} members</small>
+                  </span>
                 </button>
               ))
             )}
@@ -1431,6 +1489,8 @@ function App() {
   const [communitySearch, setCommunitySearch] = useState("");
   const [communityName, setCommunityName] = useState("");
   const [communityType, setCommunityType] = useState("Private");
+  const [communityLogoKind, setCommunityLogoKind] = useState("emoji");
+  const [communityLogoValue, setCommunityLogoValue] = useState("🏠");
   const [selectedCommunityId, setSelectedCommunityId] = useState("");
   const [chatDraft, setChatDraft] = useState("");
   const [friendsList, setFriendsList] = useState([]);
@@ -2109,6 +2169,8 @@ function App() {
           creation_cost: cost,
           season_pot: 0,
           requires_market_approval: type === "Public",
+          logo_kind: communityLogoKind,
+          logo_value: communityLogoValue,
         })
         .select("*")
         .single();
@@ -2128,9 +2190,20 @@ function App() {
       setCommunities((current) => [nextCommunity, ...current]);
       setSelectedCommunityId(nextCommunity.id);
     } else {
-      setCommunities((current) => [{ id: crypto.randomUUID(), name, type, members: 1, pnl: 0, seasonPot: 0 }, ...current]);
+      setCommunities((current) => [{
+        id: crypto.randomUUID(),
+        name,
+        type,
+        members: 1,
+        pnl: 0,
+        seasonPot: 0,
+        logoKind: communityLogoKind,
+        logoValue: communityLogoValue,
+      }, ...current]);
     }
     setCommunityName("");
+    setCommunityLogoKind("emoji");
+    setCommunityLogoValue("🏠");
     toast(`${type} community created.`);
   }
 
@@ -2209,6 +2282,10 @@ function App() {
             setCommunityName={setCommunityName}
             communityType={communityType}
             setCommunityType={setCommunityType}
+            communityLogoKind={communityLogoKind}
+            setCommunityLogoKind={setCommunityLogoKind}
+            communityLogoValue={communityLogoValue}
+            setCommunityLogoValue={setCommunityLogoValue}
             selectedCommunityId={selectedCommunityId}
             setSelectedCommunityId={setSelectedCommunityId}
             communityMessages={communityMessages}

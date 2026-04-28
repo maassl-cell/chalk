@@ -23,6 +23,8 @@ create table communities (
   creation_cost integer not null,
   season_pot integer not null default 0,
   requires_market_approval boolean not null default false,
+  logo_kind text not null default 'emoji',
+  logo_value text not null default '🏠',
   created_at timestamptz not null default now()
 );
 
