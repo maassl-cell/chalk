@@ -2026,6 +2026,66 @@ body {
   box-shadow: var(--shadow);
 }
 
+.community-create-card {
+  display: grid;
+  grid-template-columns: 1fr 140px auto;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 16px;
+  border-radius: 22px;
+  background: white;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+
+.community-create-card label,
+.community-search {
+  display: grid;
+  gap: 6px;
+}
+
+.community-create-card span,
+.community-search span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.community-create-card input,
+.community-create-card select,
+.community-search input {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  border-radius: 14px;
+  color: var(--ink);
+  background: #fffdf8;
+  border: 1px solid var(--line);
+  font-size: 16px;
+  font-weight: 750;
+}
+
+.community-create-card .primary {
+  align-self: end;
+  min-height: 48px;
+  padding: 0 22px;
+  border-radius: 14px;
+  background: var(--blue);
+  border: 0;
+  font-size: 16px;
+}
+
+.community-search {
+  margin-bottom: 20px;
+  padding: 16px;
+  border-radius: 22px;
+  background: white;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+
 .friend-add-card label {
   display: grid;
   gap: 6px;
@@ -2073,9 +2133,44 @@ body {
   border: 1px solid var(--line);
 }
 
+.community-chat {
+  display: grid;
+  gap: 10px;
+}
+
+.community-chat button {
+  width: 100%;
+  min-height: 68px;
+  padding: 12px 14px;
+  display: grid;
+  gap: 4px;
+  text-align: left;
+  border-radius: 16px;
+  color: var(--ink);
+  background: #f7f4ed;
+  border: 1px solid var(--line);
+}
+
+.community-chat strong {
+  font-size: 15px;
+  line-height: 1.25;
+}
+
+.community-chat span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .friend-bet-list {
   display: grid;
   gap: 10px;
+}
+
+@media (max-width: 620px) {
+  .community-create-card {
+    grid-template-columns: 1fr;
+  }
 }
 
 .friend-bet-list button {

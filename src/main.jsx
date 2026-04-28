@@ -210,6 +210,10 @@ function dbResolver(resolver) {
   return labels[resolver] || "community_vote";
 }
 
+function dbCommunityType(type) {
+  return type?.toLowerCase() === "public" ? "public" : "private";
+}
+
 function appResolver(resolver) {
   const labels = {
     community_vote: "Vote",
@@ -227,7 +231,8 @@ function marketFromRow(row) {
     id: row.id,
     title: row.title,
     description: row.description || "Created from Chalk.",
-    community: row.community_id ? "Community" : "No community",
+    community: row.community_name || (row.community_id ? "Community" : "No community"),
+    communityId: row.community_id,
     privacy: row.community_id ? "Private" : "Public",
     resolver: appResolver(row.resolver_mode),
     closes: row.close_at ? formatDateInput(new Date(row.close_at)) : "TBD",
@@ -243,6 +248,17 @@ function marketFromRow(row) {
     createdAt: row.created_at?.slice(0, 10) || new Date().toISOString().slice(0, 10),
     creator: row.creator_name || "Chalk user",
     creatorId: row.creator_id,
+  };
+}
+
+function communityFromRow(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    type: row.type === "public" ? "Public" : "Private",
+    members: row.members ?? 1,
+    pnl: row.pnl ?? 0,
+    seasonPot: row.season_pot ?? 0,
   };
 }
 
@@ -502,10 +518,13 @@ function MarketModal({ communities, friendsList, onClose, onCreate }) {
       setSeedPool(String(MIN_SEED_POOL));
       return;
     }
+    const communityId = form.get("community") || null;
+    const selectedCommunity = communities.find((group) => String(group.id || group.name) === String(communityId));
     onCreate({
       title: form.get("title"),
       description: "Created from Chalk.",
-      community: form.get("community") || "No community",
+      communityId,
+      community: selectedCommunity?.name || "No community",
       privacy: "Private",
       resolver,
       closes: dateValue || "TBD",
@@ -542,8 +561,8 @@ function MarketModal({ communities, friendsList, onClose, onCreate }) {
           </label>
           <label className="field wide select-field">
             <select name="community">
-              <option>No community</option>
-              {communities.map((group) => <option key={group.name}>{group.name}</option>)}
+              <option value="">No community</option>
+              {communities.map((group) => <option key={group.id || group.name} value={group.id || group.name}>{group.name}</option>)}
             </select>
           </label>
           <div className="field wide date-field">
@@ -823,6 +842,15 @@ function MarketsView({ markets, tab, setTab, search, setSearch, onBuy, onResolve
 
 function FriendsView({
   communities,
+  communitySearch,
+  setCommunitySearch,
+  communityName,
+  setCommunityName,
+  communityType,
+  setCommunityType,
+  selectedCommunityId,
+  setSelectedCommunityId,
+  communityMessages,
   friendsList,
   sentMarkets,
   friendMarkets,
@@ -833,12 +861,18 @@ function FriendsView({
   toast,
   onOpenMarket,
 }) {
+  const filteredCommunities = communities.filter((group) =>
+    `${group.name} ${group.type}`.toLowerCase().includes(communitySearch.toLowerCase()),
+  );
+  const activeCommunity = communities.find((group) => String(group.id) === String(selectedCommunityId));
+  const activeMessages = communityMessages.filter((message) => String(message.communityId) === String(selectedCommunityId));
+
   return (
     <section>
       <div className="topbar">
         <div className="title">
-          <h2>Friends & Groups</h2>
-          <p>Add friends by their Chalk username. Friends can become rivals, chat, and join private markets.</p>
+          <h2>Communities</h2>
+          <p>Search every community, create your own, and watch posted markets land in the community chat.</p>
         </div>
       </div>
       <form className="friend-add-card" onSubmit={onAddFriend}>
@@ -853,6 +887,21 @@ function FriendsView({
         </label>
         <button className="primary">Add</button>
       </form>
+      <form className="community-create-card" onSubmit={onCreateCommunity}>
+        <label>
+          <span>Create community</span>
+          <input value={communityName} placeholder="Community name" onChange={(event) => setCommunityName(event.target.value)} required />
+        </label>
+        <select value={communityType} onChange={(event) => setCommunityType(event.target.value)}>
+          <option>Private</option>
+          <option>Public</option>
+        </select>
+        <button className="primary">Create</button>
+      </form>
+      <label className="community-search">
+        <span>Search communities</span>
+        <input value={communitySearch} placeholder="Search all communities" onChange={(event) => setCommunitySearch(event.target.value)} />
+      </label>
       <div className="market-grid">
         <article className="market-card compact-card">
           <h3>Friends</h3>
@@ -899,6 +948,38 @@ function FriendsView({
             )}
           </div>
         </article>
+        <article className="market-card compact-card community-directory">
+          <h3>All communities</h3>
+          <div className="friend-bet-list">
+            {filteredCommunities.length === 0 ? (
+              <p className="subtle">No communities match that search.</p>
+            ) : (
+              filteredCommunities.map((group) => (
+                <button type="button" key={group.id || group.name} onClick={() => setSelectedCommunityId(group.id)}>
+                  <strong>{group.name}</strong>
+                  <span>{group.type} · {group.members} members</span>
+                </button>
+              ))
+            )}
+          </div>
+        </article>
+        <article className="market-card compact-card community-chat-card">
+          <h3>{activeCommunity ? `${activeCommunity.name} chat` : "Community chat"}</h3>
+          <div className="community-chat">
+            {!activeCommunity ? (
+              <p className="subtle">Select a community to see markets posted to its chat.</p>
+            ) : activeMessages.length === 0 ? (
+              <p className="subtle">No markets have been posted to this community yet.</p>
+            ) : (
+              activeMessages.map((message) => (
+                <button type="button" key={message.id} onClick={() => message.marketId && onOpenMarket(message.marketId)}>
+                  <strong>{message.body}</strong>
+                  <span>{message.senderName} · {message.createdAt}</span>
+                </button>
+              ))
+            )}
+          </div>
+        </article>
         {communities.map((group) => (
           <article className="market-card" key={group.name}>
             <div className="market-top">
@@ -920,10 +1001,6 @@ function FriendsView({
             </button>
           </article>
         ))}
-      </div>
-      <div className="split community-actions">
-        <button className="secondary" onClick={() => onCreateCommunity("Private")}>Private · 200</button>
-        <button className="primary" onClick={() => onCreateCommunity("Public")}>Public · 500</button>
       </div>
     </section>
   );
@@ -1167,6 +1244,11 @@ function App() {
   const [markets, setMarkets] = useState(initialMarkets);
   const [positions, setPositions] = useState([]);
   const [communities, setCommunities] = useState(initialCommunities);
+  const [communityMessages, setCommunityMessages] = useState([]);
+  const [communitySearch, setCommunitySearch] = useState("");
+  const [communityName, setCommunityName] = useState("");
+  const [communityType, setCommunityType] = useState("Private");
+  const [selectedCommunityId, setSelectedCommunityId] = useState("");
   const [friendsList, setFriendsList] = useState([]);
   const [sentMarkets, setSentMarkets] = useState([]);
   const [friendUsername, setFriendUsername] = useState("");
@@ -1198,6 +1280,8 @@ function App() {
       setUserProfile(null);
       setMarkets(initialMarkets);
       setPositions([]);
+      setCommunities(initialCommunities);
+      setCommunityMessages([]);
       setFriendsList([]);
       setSentMarkets([]);
       return;
@@ -1252,18 +1336,55 @@ function App() {
       setCredits(nextProfile.credits ?? 0);
     }
 
-    const [{ data: marketRows, error: marketsError }, { data: positionRows, error: positionsError }] =
+    const [
+      { data: marketRows, error: marketsError },
+      { data: positionRows, error: positionsError },
+      { data: communityRows, error: communitiesError },
+    ] =
       await Promise.all([
         supabase.from("markets").select("*").order("created_at", { ascending: false }),
         supabase.from("positions").select("*").eq("profile_id", user.id).order("created_at", { ascending: false }),
+        supabase.from("communities").select("*").order("created_at", { ascending: false }),
       ]);
 
     if (marketsError) toast(marketsError.message);
     if (positionsError) toast(positionsError.message);
+    if (communitiesError) toast(communitiesError.message);
     setMarkets((marketRows ?? []).map(marketFromRow));
     setPositions((positionRows ?? []).map(positionFromRow));
-    await Promise.all([loadFriends(user.id), loadSentMarkets(user.id)]);
+    const nextCommunities = (communityRows ?? []).map(communityFromRow);
+    setCommunities(nextCommunities);
+    if (!selectedCommunityId && nextCommunities[0]?.id) setSelectedCommunityId(nextCommunities[0].id);
+    await Promise.all([loadFriends(user.id), loadSentMarkets(user.id), loadCommunityMessages()]);
     setDataReady(true);
+  }
+
+  async function loadCommunityMessages() {
+    if (!supabase) return;
+    const { data: rows, error } = await supabase
+      .from("community_messages")
+      .select("id, community_id, market_id, sender_id, body, created_at")
+      .order("created_at", { ascending: false });
+    if (error) {
+      toast(error.message);
+      return;
+    }
+    const senderIds = [...new Set((rows ?? []).map((row) => row.sender_id))];
+    let senderMap = new Map();
+    if (senderIds.length) {
+      const { data: senderRows } = await supabase.from("profiles").select("id, display_name, handle").in("id", senderIds);
+      senderMap = new Map((senderRows ?? []).map((row) => [row.id, row.display_name || row.handle || "Chalk user"]));
+    }
+    setCommunityMessages(
+      (rows ?? []).map((row) => ({
+        id: row.id,
+        communityId: row.community_id,
+        marketId: row.market_id,
+        body: row.body,
+        senderName: senderMap.get(row.sender_id) || "Chalk user",
+        createdAt: new Date(row.created_at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }),
+      })),
+    );
   }
 
   async function loadFriends(userId) {
@@ -1583,6 +1704,7 @@ function App() {
         traders: 0,
         createdAt: new Date().toISOString().slice(0, 10),
         creator: userProfile?.display_name || session?.user?.email?.split("@")[0] || "Chalk user",
+        creatorId: userProfile?.id,
       };
 
     if (supabase && userProfile) {
@@ -1592,7 +1714,8 @@ function App() {
         .insert({
           id: nextMarket.id,
           creator_id: userProfile.id,
-          community_id: null,
+          community_id: nextMarket.communityId,
+          community_name: nextMarket.community,
           title: nextMarket.title,
           description: nextMarket.description,
           status: dbStatus(nextMarket.status),
@@ -1618,6 +1741,9 @@ function App() {
       if (draft.sendToFriendId) {
         await sendMarket(createdMarket.id, draft.sendToFriendId);
       }
+      if (createdMarket.communityId) {
+        await postMarketToCommunity(createdMarket);
+      }
     } else {
       setMarkets((current) => [nextMarket, ...current]);
     }
@@ -1631,14 +1757,75 @@ function App() {
     );
   }
 
-  function createCommunity(type) {
+  async function postMarketToCommunity(market) {
+    if (!supabase || !userProfile || !market.communityId) return;
+    const { data, error } = await supabase
+      .from("community_messages")
+      .insert({
+        community_id: market.communityId,
+        market_id: market.id,
+        sender_id: userProfile.id,
+        body: `New market: ${market.title}`,
+      })
+      .select("id, community_id, market_id, body, created_at")
+      .single();
+    if (error) {
+      toast(error.message);
+      return;
+    }
+    setCommunityMessages((current) => [
+      {
+        id: data.id,
+        communityId: data.community_id,
+        marketId: data.market_id,
+        body: data.body,
+        senderName: userProfile.display_name,
+        createdAt: new Date(data.created_at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }),
+      },
+      ...current,
+    ]);
+  }
+
+  async function createCommunity(event) {
+    event.preventDefault();
+    const name = communityName.trim();
+    if (!name) return;
+    const type = communityType;
     const cost = type === "Public" ? 500 : 200;
     if (credits < cost) {
       toast(`${type} communities cost ${cost}.`);
       return;
     }
-    setCredits((value) => (value >= INFINITE_CREDITS ? value : value - cost));
-    setCommunities((current) => [{ name: type === "Public" ? "New Public Board" : "New Private Circle", type, members: 1, pnl: 0, seasonPot: 0 }, ...current]);
+    if (supabase && userProfile) {
+      const { data, error } = await supabase
+        .from("communities")
+        .insert({
+          name,
+          type: dbCommunityType(type),
+          creator_id: userProfile.id,
+          creation_cost: cost,
+          season_pot: 0,
+          requires_market_approval: type === "Public",
+        })
+        .select("*")
+        .single();
+      if (error) {
+        toast(error.message);
+        return;
+      }
+      await supabase.from("community_members").insert({
+        community_id: data.id,
+        profile_id: userProfile.id,
+        role: "creator",
+      });
+      const nextCommunity = communityFromRow(data);
+      setCommunities((current) => [nextCommunity, ...current]);
+      setSelectedCommunityId(nextCommunity.id);
+    } else {
+      setCommunities((current) => [{ id: crypto.randomUUID(), name, type, members: 1, pnl: 0, seasonPot: 0 }, ...current]);
+    }
+    await saveCredits(credits >= INFINITE_CREDITS ? credits : credits - cost);
+    setCommunityName("");
     toast(`${type} community created for ${cost}.`);
   }
 
@@ -1699,6 +1886,15 @@ function App() {
         {view === "groups" && (
           <FriendsView
             communities={communities}
+            communitySearch={communitySearch}
+            setCommunitySearch={setCommunitySearch}
+            communityName={communityName}
+            setCommunityName={setCommunityName}
+            communityType={communityType}
+            setCommunityType={setCommunityType}
+            selectedCommunityId={selectedCommunityId}
+            setSelectedCommunityId={setSelectedCommunityId}
+            communityMessages={communityMessages}
             friendsList={friendsList}
             sentMarkets={sentMarkets}
             friendMarkets={friendMarkets}

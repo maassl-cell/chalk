@@ -12,6 +12,7 @@ alter table markets add column if not exists traders integer not null default 0;
 alter table markets add column if not exists outcome contract_side;
 alter table markets add column if not exists history integer[] not null default '{}';
 alter table markets add column if not exists creator_name text not null default 'Chalk user';
+alter table markets add column if not exists community_name text not null default 'No community';
 alter table markets alter column description set default 'Created from Chalk.';
 
 alter table positions add column if not exists amount integer not null default 0;
@@ -42,6 +43,15 @@ create table if not exists market_sends (
   unique (market_id, sender_id, recipient_id)
 );
 
+create table if not exists community_messages (
+  id uuid primary key default gen_random_uuid(),
+  community_id uuid not null references communities(id) on delete cascade,
+  market_id uuid references markets(id) on delete set null,
+  sender_id uuid not null references profiles(id) on delete cascade,
+  body text not null,
+  created_at timestamptz not null default now()
+);
+
 alter table profiles enable row level security;
 alter table communities enable row level security;
 alter table community_members enable row level security;
@@ -55,6 +65,7 @@ alter table cosmetics enable row level security;
 alter table profile_cosmetics enable row level security;
 alter table friendships enable row level security;
 alter table market_sends enable row level security;
+alter table community_messages enable row level security;
 
 drop policy if exists "Users can read profiles" on profiles;
 create policy "Users can read profiles" on profiles for select to authenticated using (true);
@@ -79,6 +90,15 @@ drop policy if exists "Authenticated users can read communities" on communities;
 create policy "Authenticated users can read communities" on communities for select to authenticated using (true);
 drop policy if exists "Authenticated users can create communities" on communities;
 create policy "Authenticated users can create communities" on communities for insert to authenticated with check (auth.uid() = creator_id);
+drop policy if exists "Authenticated users can read community members" on community_members;
+create policy "Authenticated users can read community members" on community_members for select to authenticated using (true);
+drop policy if exists "Authenticated users can join communities" on community_members;
+create policy "Authenticated users can join communities" on community_members for insert to authenticated with check (auth.uid() = profile_id);
+
+drop policy if exists "Authenticated users can read community messages" on community_messages;
+create policy "Authenticated users can read community messages" on community_messages for select to authenticated using (true);
+drop policy if exists "Authenticated users can create community messages" on community_messages;
+create policy "Authenticated users can create community messages" on community_messages for insert to authenticated with check (auth.uid() = sender_id);
 
 drop policy if exists "Authenticated users can read markets" on markets;
 create policy "Authenticated users can read markets" on markets for select to authenticated using (true);
