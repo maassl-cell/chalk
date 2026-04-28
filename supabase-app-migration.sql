@@ -33,6 +33,15 @@ create table if not exists friendships (
   unique (owner_id, friend_id)
 );
 
+create table if not exists market_sends (
+  id uuid primary key default gen_random_uuid(),
+  market_id uuid not null references markets(id) on delete cascade,
+  sender_id uuid not null references profiles(id) on delete cascade,
+  recipient_id uuid not null references profiles(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  unique (market_id, sender_id, recipient_id)
+);
+
 alter table profiles enable row level security;
 alter table communities enable row level security;
 alter table community_members enable row level security;
@@ -45,6 +54,7 @@ alter table messages enable row level security;
 alter table cosmetics enable row level security;
 alter table profile_cosmetics enable row level security;
 alter table friendships enable row level security;
+alter table market_sends enable row level security;
 
 drop policy if exists "Users can read profiles" on profiles;
 create policy "Users can read profiles" on profiles for select to authenticated using (true);
@@ -59,6 +69,11 @@ drop policy if exists "Users can create own friendships" on friendships;
 create policy "Users can create own friendships" on friendships for insert to authenticated with check (auth.uid() = owner_id);
 drop policy if exists "Users can delete own friendships" on friendships;
 create policy "Users can delete own friendships" on friendships for delete to authenticated using (auth.uid() = owner_id);
+
+drop policy if exists "Users can read market sends" on market_sends;
+create policy "Users can read market sends" on market_sends for select to authenticated using (auth.uid() = sender_id or auth.uid() = recipient_id);
+drop policy if exists "Users can send markets" on market_sends;
+create policy "Users can send markets" on market_sends for insert to authenticated with check (auth.uid() = sender_id);
 
 drop policy if exists "Authenticated users can read communities" on communities;
 create policy "Authenticated users can read communities" on communities for select to authenticated using (true);

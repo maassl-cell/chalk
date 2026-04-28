@@ -2073,6 +2073,85 @@ body {
   border: 1px solid var(--line);
 }
 
+.friend-bet-list {
+  display: grid;
+  gap: 10px;
+}
+
+.friend-bet-list button {
+  width: 100%;
+  min-height: 64px;
+  padding: 12px 14px;
+  display: grid;
+  gap: 4px;
+  text-align: left;
+  border-radius: 16px;
+  color: var(--ink);
+  background: #f7f4ed;
+  border: 1px solid var(--line);
+}
+
+.friend-bet-list strong {
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+.friend-bet-list span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.send-market {
+  display: grid;
+  gap: 10px;
+}
+
+.send-market > button {
+  width: 100%;
+  min-height: 42px;
+  border-radius: 14px;
+  color: var(--blue);
+  background: #f7f4ed;
+  border: 1px solid var(--line);
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.send-market-panel {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 16px;
+  background: #f8f7f1;
+  border: 1px solid var(--line);
+}
+
+.send-market-panel .subtle {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.send-market-panel select {
+  min-height: 42px;
+  border-radius: 12px;
+  color: var(--ink);
+  background: white;
+  border: 1px solid var(--line);
+  padding: 0 12px;
+  font-weight: 850;
+}
+
+.send-market-panel .primary {
+  min-height: 42px;
+  border-radius: 12px;
+  padding: 0 16px;
+  background: var(--blue);
+  border: 0;
+  font-size: 15px;
+}
+
 .community-actions {
   margin-top: 20px;
 }

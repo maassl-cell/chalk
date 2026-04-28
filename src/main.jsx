@@ -242,6 +242,7 @@ function marketFromRow(row) {
     history: row.history?.length ? row.history : [marketProbability(yesPool, noPool)],
     createdAt: row.created_at?.slice(0, 10) || new Date().toISOString().slice(0, 10),
     creator: row.creator_name || "Chalk user",
+    creatorId: row.creator_id,
   };
 }
 
@@ -274,12 +275,14 @@ function Pill({ children, tone = "" }) {
   return <span className={`pill ${tone}`}>{children}</span>;
 }
 
-function MarketCard({ market, onBuy, onResolve }) {
+function MarketCard({ market, onBuy, onResolve, friendsList = [], onSend }) {
   const [ticket, setTicket] = useState(null);
   const [amount, setAmount] = useState(String(TRADE_CREDITS));
   const [ticketError, setTicketError] = useState("");
   const [now, setNow] = useState(() => Date.now());
   const [chartOpen, setChartOpen] = useState(false);
+  const [sendOpen, setSendOpen] = useState(false);
+  const [selectedFriend, setSelectedFriend] = useState("");
   const no = 100 - market.yes;
   const yesPool = market.yesPool ?? Math.round((market.volume * market.yes) / 100);
   const noPool = market.noPool ?? market.volume - yesPool;
@@ -336,6 +339,15 @@ function MarketCard({ market, onBuy, onResolve }) {
     setTicketError("");
   }
 
+  async function submitSend() {
+    if (!selectedFriend || !onSend) return;
+    const sent = await onSend(market.id, selectedFriend);
+    if (sent) {
+      setSendOpen(false);
+      setSelectedFriend("");
+    }
+  }
+
   return (
     <article className="market-card">
       <div className="market-top">
@@ -385,6 +397,28 @@ function MarketCard({ market, onBuy, onResolve }) {
           <span>NO Pool</span>
           <strong>{noPool.toLocaleString()}</strong>
         </div>
+      </div>
+      <div className="send-market">
+        <button type="button" onClick={() => setSendOpen((value) => !value)}>
+          Send to friend
+        </button>
+        {sendOpen && (
+          <div className="send-market-panel">
+            {friendsList.length === 0 ? (
+              <p className="subtle">Add a friend first, then send them this market.</p>
+            ) : (
+              <>
+                <select value={selectedFriend} onChange={(event) => setSelectedFriend(event.target.value)}>
+                  <option value="">Choose friend</option>
+                  {friendsList.map((friend) => (
+                    <option key={friend.id} value={friend.id}>{friend.name}</option>
+                  ))}
+                </select>
+                <button type="button" className="primary" onClick={submitSend}>Send</button>
+              </>
+            )}
+          </div>
+        )}
       </div>
       {ticket && (
         <div className="trade-ticket">
@@ -762,7 +796,7 @@ function Sidebar({ view, setView, credits, streak, onDaily, openModal, user, onS
   );
 }
 
-function MarketsView({ markets, tab, setTab, search, setSearch, onBuy, onResolve }) {
+function MarketsView({ markets, tab, setTab, search, setSearch, onBuy, onResolve, friendsList, onSend }) {
   const filteredMarkets = useMemo(
     () =>
       markets.filter((market) => {
@@ -790,7 +824,16 @@ function MarketsView({ markets, tab, setTab, search, setSearch, onBuy, onResolve
         <input className="search" value={search} placeholder="Search markets" onChange={(event) => setSearch(event.target.value)} />
       </div>
       <div className="market-grid">
-        {filteredMarkets.map((market) => <MarketCard key={market.id} market={market} onBuy={onBuy} onResolve={onResolve} />)}
+        {filteredMarkets.map((market) => (
+          <MarketCard
+            key={market.id}
+            market={market}
+            onBuy={onBuy}
+            onResolve={onResolve}
+            friendsList={friendsList}
+            onSend={onSend}
+          />
+        ))}
         {filteredMarkets.length === 0 && (
           <article className="market-card compact-card">
             <h3>No markets yet.</h3>
@@ -802,7 +845,18 @@ function MarketsView({ markets, tab, setTab, search, setSearch, onBuy, onResolve
   );
 }
 
-function FriendsView({ communities, friendsList, friendUsername, setFriendUsername, onAddFriend, onCreateCommunity, toast }) {
+function FriendsView({
+  communities,
+  friendsList,
+  sentMarkets,
+  friendMarkets,
+  friendUsername,
+  setFriendUsername,
+  onAddFriend,
+  onCreateCommunity,
+  toast,
+  onOpenMarket,
+}) {
   return (
     <section>
       <div className="topbar">
@@ -828,13 +882,43 @@ function FriendsView({ communities, friendsList, friendUsername, setFriendUserna
           <h3>Friends</h3>
           <div className="friend-list">
             {friendsList.length === 0 ? (
-              <p className="subtle">No friends yet. Add someone by email once they have a Chalk account.</p>
+              <p className="subtle">No friends yet. Add someone by username once they have a Chalk account.</p>
             ) : (
               friendsList.map((friend) => (
                 <div className="dm-row" key={friend.id}>
                   <Avatar person={friend} color={friend.color} />
                   <div><strong>{friend.name}</strong><span>{friend.line}</span></div>
                 </div>
+              ))
+            )}
+          </div>
+        </article>
+        <article className="market-card compact-card">
+          <h3>Sent to you</h3>
+          <div className="friend-bet-list">
+            {sentMarkets.length === 0 ? (
+              <p className="subtle">Markets your friends send you will appear here.</p>
+            ) : (
+              sentMarkets.map((market) => (
+                <button type="button" key={`${market.id}-${market.sentBy}`} onClick={() => onOpenMarket(market.id)}>
+                  <strong>{market.title}</strong>
+                  <span>Sent by {market.sentBy}</span>
+                </button>
+              ))
+            )}
+          </div>
+        </article>
+        <article className="market-card compact-card">
+          <h3>Friends' markets</h3>
+          <div className="friend-bet-list">
+            {friendMarkets.length === 0 ? (
+              <p className="subtle">When your friends create markets, they will show here.</p>
+            ) : (
+              friendMarkets.map((market) => (
+                <button type="button" key={market.id} onClick={() => onOpenMarket(market.id)}>
+                  <strong>{market.title}</strong>
+                  <span>By {market.creator}</span>
+                </button>
               ))
             )}
           </div>
@@ -1108,6 +1192,7 @@ function App() {
   const [positions, setPositions] = useState([]);
   const [communities, setCommunities] = useState(initialCommunities);
   const [friendsList, setFriendsList] = useState([]);
+  const [sentMarkets, setSentMarkets] = useState([]);
   const [friendUsername, setFriendUsername] = useState("");
   const [modal, setModal] = useState(null);
   const [toastText, setToastText] = useState("");
@@ -1138,6 +1223,7 @@ function App() {
       setMarkets(initialMarkets);
       setPositions([]);
       setFriendsList([]);
+      setSentMarkets([]);
       return;
     }
     loadAppData(session.user);
@@ -1200,7 +1286,7 @@ function App() {
     if (positionsError) toast(positionsError.message);
     setMarkets((marketRows ?? []).map(marketFromRow));
     setPositions((positionRows ?? []).map(positionFromRow));
-    await loadFriends(user.id);
+    await Promise.all([loadFriends(user.id), loadSentMarkets(user.id)]);
     setDataReady(true);
   }
 
@@ -1228,6 +1314,45 @@ function App() {
       return;
     }
     setFriendsList((profileRows ?? []).map(friendFromProfile));
+  }
+
+  async function loadSentMarkets(userId) {
+    if (!supabase) return;
+    const { data: sendRows, error } = await supabase
+      .from("market_sends")
+      .select("market_id, sender_id, created_at")
+      .eq("recipient_id", userId)
+      .order("created_at", { ascending: false });
+    if (error) {
+      toast(error.message);
+      return;
+    }
+    const rows = sendRows ?? [];
+    if (!rows.length) {
+      setSentMarkets([]);
+      return;
+    }
+
+    const marketIds = [...new Set(rows.map((row) => row.market_id))];
+    const senderIds = [...new Set(rows.map((row) => row.sender_id))];
+    const [{ data: marketRows, error: marketsError }, { data: senderRows, error: sendersError }] =
+      await Promise.all([
+        supabase.from("markets").select("*").in("id", marketIds),
+        supabase.from("profiles").select("id, display_name, handle").in("id", senderIds),
+      ]);
+    if (marketsError) toast(marketsError.message);
+    if (sendersError) toast(sendersError.message);
+
+    const marketMap = new Map((marketRows ?? []).map((row) => [row.id, marketFromRow(row)]));
+    const senderMap = new Map((senderRows ?? []).map((row) => [row.id, row.display_name || row.handle || "Friend"]));
+    setSentMarkets(
+      rows
+        .map((row) => {
+          const market = marketMap.get(row.market_id);
+          return market ? { ...market, sentBy: senderMap.get(row.sender_id) || "Friend" } : null;
+        })
+        .filter(Boolean),
+    );
   }
 
   async function addFriend(event) {
@@ -1263,6 +1388,30 @@ function App() {
     setFriendsList((current) => [friendFromProfile(friendProfile), ...current]);
     setFriendUsername("");
     toast(`${friendProfile.display_name} added.`);
+  }
+
+  async function sendMarket(marketId, friendId) {
+    if (!supabase || !userProfile) return false;
+    const { error } = await supabase.from("market_sends").insert({
+      market_id: marketId,
+      sender_id: userProfile.id,
+      recipient_id: friendId,
+    });
+    if (error) {
+      toast(error.code === "23505" ? "You already sent this market to that friend." : error.message);
+      return false;
+    }
+    const friend = friendsList.find((item) => item.id === friendId);
+    toast(`Sent market to ${friend?.name || "friend"}.`);
+    return true;
+  }
+
+  function openMarketFromFriends(marketId) {
+    setSearch("");
+    setTab("all");
+    setView("markets");
+    const market = markets.find((item) => item.id === marketId) || sentMarkets.find((item) => item.id === marketId);
+    if (market) toast(`Opened: ${market.title}`);
   }
 
   async function saveCredits(nextCredits) {
@@ -1524,6 +1673,9 @@ function App() {
     toast(`Purchased ${name} for ${price}.`);
   }
 
+  const friendIds = friendsList.map((friend) => friend.id);
+  const friendMarkets = markets.filter((market) => friendIds.includes(market.creatorId));
+
   if (!authReady) {
     return <div className="loading-screen">Loading Chalk...</div>;
   }
@@ -1549,16 +1701,31 @@ function App() {
         onSignOut={signOut}
       />
       <main className="main">
-        {view === "markets" && <MarketsView markets={markets} tab={tab} setTab={setTab} search={search} setSearch={setSearch} onBuy={buy} onResolve={resolveMarket} />}
+        {view === "markets" && (
+          <MarketsView
+            markets={markets}
+            tab={tab}
+            setTab={setTab}
+            search={search}
+            setSearch={setSearch}
+            onBuy={buy}
+            onResolve={resolveMarket}
+            friendsList={friendsList}
+            onSend={sendMarket}
+          />
+        )}
         {view === "groups" && (
           <FriendsView
             communities={communities}
             friendsList={friendsList}
+            sentMarkets={sentMarkets}
+            friendMarkets={friendMarkets}
             friendUsername={friendUsername}
             setFriendUsername={setFriendUsername}
             onAddFriend={addFriend}
             onCreateCommunity={createCommunity}
             toast={toast}
+            onOpenMarket={openMarketFromFriends}
           />
         )}
         {view === "bets" && <MyBetsView positions={positions} />}
