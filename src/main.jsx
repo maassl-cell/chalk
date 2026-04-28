@@ -275,14 +275,12 @@ function Pill({ children, tone = "" }) {
   return <span className={`pill ${tone}`}>{children}</span>;
 }
 
-function MarketCard({ market, onBuy, onResolve, friendsList = [], onSend }) {
+function MarketCard({ market, onBuy, onResolve }) {
   const [ticket, setTicket] = useState(null);
   const [amount, setAmount] = useState(String(TRADE_CREDITS));
   const [ticketError, setTicketError] = useState("");
   const [now, setNow] = useState(() => Date.now());
   const [chartOpen, setChartOpen] = useState(false);
-  const [sendOpen, setSendOpen] = useState(false);
-  const [selectedFriend, setSelectedFriend] = useState("");
   const no = 100 - market.yes;
   const yesPool = market.yesPool ?? Math.round((market.volume * market.yes) / 100);
   const noPool = market.noPool ?? market.volume - yesPool;
@@ -339,15 +337,6 @@ function MarketCard({ market, onBuy, onResolve, friendsList = [], onSend }) {
     setTicketError("");
   }
 
-  async function submitSend() {
-    if (!selectedFriend || !onSend) return;
-    const sent = await onSend(market.id, selectedFriend);
-    if (sent) {
-      setSendOpen(false);
-      setSelectedFriend("");
-    }
-  }
-
   return (
     <article className="market-card">
       <div className="market-top">
@@ -397,28 +386,6 @@ function MarketCard({ market, onBuy, onResolve, friendsList = [], onSend }) {
           <span>NO Pool</span>
           <strong>{noPool.toLocaleString()}</strong>
         </div>
-      </div>
-      <div className="send-market">
-        <button type="button" onClick={() => setSendOpen((value) => !value)}>
-          Send to friend
-        </button>
-        {sendOpen && (
-          <div className="send-market-panel">
-            {friendsList.length === 0 ? (
-              <p className="subtle">Add a friend first, then send them this market.</p>
-            ) : (
-              <>
-                <select value={selectedFriend} onChange={(event) => setSelectedFriend(event.target.value)}>
-                  <option value="">Choose friend</option>
-                  {friendsList.map((friend) => (
-                    <option key={friend.id} value={friend.id}>{friend.name}</option>
-                  ))}
-                </select>
-                <button type="button" className="primary" onClick={submitSend}>Send</button>
-              </>
-            )}
-          </div>
-        )}
       </div>
       {ticket && (
         <div className="trade-ticket">
@@ -497,13 +464,14 @@ function MarketCard({ market, onBuy, onResolve, friendsList = [], onSend }) {
   );
 }
 
-function MarketModal({ communities, onClose, onCreate }) {
+function MarketModal({ communities, friendsList, onClose, onCreate }) {
   const [resolver, setResolver] = useState("Community vote");
   const [dateValue, setDateValue] = useState("");
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(() => new Date());
   const [startingYes, setStartingYes] = useState(50);
   const [seedPool, setSeedPool] = useState(String(MARKET_SEED_POOL));
+  const [sendToFriendId, setSendToFriendId] = useState("");
 
   const calendarDays = useMemo(() => {
     const year = calendarMonth.getFullYear();
@@ -543,6 +511,7 @@ function MarketModal({ communities, onClose, onCreate }) {
       closes: dateValue || "TBD",
       yes: Number(startingYes),
       seedPool: seedAmount,
+      sendToFriendId,
     });
   }
 
@@ -561,6 +530,15 @@ function MarketModal({ communities, onClose, onCreate }) {
               required
               placeholder="What's the bet? e.g. Will Jake hook up before NYE?"
             />
+          </label>
+          <label className="field wide send-field">
+            <span>Send to friend</span>
+            <select value={sendToFriendId} onChange={(event) => setSendToFriendId(event.target.value)}>
+              <option value="">Do not send</option>
+              {friendsList.map((friend) => (
+                <option key={friend.id} value={friend.id}>{friend.name}</option>
+              ))}
+            </select>
           </label>
           <label className="field wide select-field">
             <select name="community">
@@ -796,7 +774,7 @@ function Sidebar({ view, setView, credits, streak, onDaily, openModal, user, onS
   );
 }
 
-function MarketsView({ markets, tab, setTab, search, setSearch, onBuy, onResolve, friendsList, onSend }) {
+function MarketsView({ markets, tab, setTab, search, setSearch, onBuy, onResolve }) {
   const filteredMarkets = useMemo(
     () =>
       markets.filter((market) => {
@@ -830,8 +808,6 @@ function MarketsView({ markets, tab, setTab, search, setSearch, onBuy, onResolve
             market={market}
             onBuy={onBuy}
             onResolve={onResolve}
-            friendsList={friendsList}
-            onSend={onSend}
           />
         ))}
         {filteredMarkets.length === 0 && (
@@ -1637,14 +1613,22 @@ function App() {
         toast(error.message);
         return;
       }
-      setMarkets((current) => [marketFromRow(data), ...current]);
+      const createdMarket = marketFromRow(data);
+      setMarkets((current) => [createdMarket, ...current]);
+      if (draft.sendToFriendId) {
+        await sendMarket(createdMarket.id, draft.sendToFriendId);
+      }
     } else {
       setMarkets((current) => [nextMarket, ...current]);
     }
 
     await saveCredits(credits >= INFINITE_CREDITS ? credits : credits - seedCost);
     setModal(null);
-    toast(`Market posted with a ${seedCost.toLocaleString()} seeded pool.`);
+    toast(
+      draft.sendToFriendId
+        ? `Market posted and sent with a ${seedCost.toLocaleString()} seeded pool.`
+        : `Market posted with a ${seedCost.toLocaleString()} seeded pool.`,
+    );
   }
 
   function createCommunity(type) {
@@ -1710,8 +1694,6 @@ function App() {
             setSearch={setSearch}
             onBuy={buy}
             onResolve={resolveMarket}
-            friendsList={friendsList}
-            onSend={sendMarket}
           />
         )}
         {view === "groups" && (
@@ -1734,7 +1716,14 @@ function App() {
         {view === "shop" && <ShopView onBuyCosmetic={buyCosmetic} />}
       </main>
       <SocialRail />
-      {modal === "market" && <MarketModal communities={communities} onClose={() => setModal(null)} onCreate={createMarket} />}
+      {modal === "market" && (
+        <MarketModal
+          communities={communities}
+          friendsList={friendsList}
+          onClose={() => setModal(null)}
+          onCreate={createMarket}
+        />
+      )}
       {toastText && <div className="toast">{toastText}</div>}
     </div>
   );
