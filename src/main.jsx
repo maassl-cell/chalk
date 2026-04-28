@@ -882,6 +882,7 @@ function FriendsView({
   selectedCommunityId,
   setSelectedCommunityId,
   communityMessages,
+  markets,
   friendsList,
   sentMarkets,
   friendMarkets,
@@ -897,6 +898,56 @@ function FriendsView({
   );
   const activeCommunity = communities.find((group) => String(group.id) === String(selectedCommunityId));
   const activeMessages = communityMessages.filter((message) => String(message.communityId) === String(selectedCommunityId));
+  const activeCommunityMarkets = markets.filter((market) => String(market.communityId) === String(selectedCommunityId));
+
+  if (activeCommunity) {
+    return (
+      <section>
+        <button className="back-button" type="button" onClick={() => setSelectedCommunityId("")}>
+          ← Communities
+        </button>
+        <article className="market-card community-room">
+          <div className="market-top">
+            <div>
+              <h3>{activeCommunity.name}</h3>
+              <p className="subtle">{activeCommunity.type} · {activeCommunity.members} members</p>
+            </div>
+            <Pill tone={activeCommunity.type === "Public" ? "hot" : "good"}>{activeCommunity.type}</Pill>
+          </div>
+          <div className="community-room-section">
+            <h4>Past bets</h4>
+            <div className="friend-bet-list">
+              {activeCommunityMarkets.length === 0 ? (
+                <p className="subtle">No bets have been posted in this community yet.</p>
+              ) : (
+                activeCommunityMarkets.map((market) => (
+                  <button type="button" key={market.id} onClick={() => onOpenMarket(market.id)}>
+                    <strong>{market.title}</strong>
+                    <span>{market.yes}% YES · {market.volume.toLocaleString()} volume · {market.status}</span>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+          <div className="community-room-section">
+            <h4>Chat</h4>
+            <div className="community-chat">
+              {activeMessages.length === 0 ? (
+                <p className="subtle">No chat posts yet. Markets posted to this community will appear here.</p>
+              ) : (
+                activeMessages.map((message) => (
+                  <button type="button" key={message.id} onClick={() => message.marketId && onOpenMarket(message.marketId)}>
+                    <strong>{message.body}</strong>
+                    <span>{message.senderName} · {message.createdAt}</span>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        </article>
+      </section>
+    );
+  }
 
   return (
     <section>
@@ -983,7 +1034,7 @@ function FriendsView({
           </div>
         </article>
         <article className="market-card compact-card community-directory">
-          <h3>All communities</h3>
+          <h3>My communities</h3>
           <div className="friend-bet-list">
             {filteredCommunities.length === 0 ? (
               <p className="subtle">No communities match that search.</p>
@@ -997,44 +1048,6 @@ function FriendsView({
             )}
           </div>
         </article>
-        <article className="market-card compact-card community-chat-card">
-          <h3>{activeCommunity ? `${activeCommunity.name} chat` : "Community chat"}</h3>
-          <div className="community-chat">
-            {!activeCommunity ? (
-              <p className="subtle">Select a community to see markets posted to its chat.</p>
-            ) : activeMessages.length === 0 ? (
-              <p className="subtle">No markets have been posted to this community yet.</p>
-            ) : (
-              activeMessages.map((message) => (
-                <button type="button" key={message.id} onClick={() => message.marketId && onOpenMarket(message.marketId)}>
-                  <strong>{message.body}</strong>
-                  <span>{message.senderName} · {message.createdAt}</span>
-                </button>
-              ))
-            )}
-          </div>
-        </article>
-        {communities.map((group) => (
-          <article className="market-card" key={group.name}>
-            <div className="market-top">
-              <Pill tone={group.type === "Public" ? "hot" : "good"}>{group.type}</Pill>
-              <Pill>{group.members} members</Pill>
-            </div>
-            <h3>{group.name}</h3>
-            <div className="season-pot">
-              <span className="eyebrow">Season winner pool</span>
-              <strong>{currency(group.seasonPot)}</strong>
-            </div>
-            <div className="market-meta">
-              <Pill>Current P/L: {group.pnl >= 0 ? "+" : ""}{currency(group.pnl)}</Pill>
-              <Pill>Monthly season</Pill>
-              <Pill>H2H records active</Pill>
-            </div>
-            <button className="resolve-button" onClick={() => toast(`Invite link copied for ${group.name}.`)}>
-              Invite friends
-            </button>
-          </article>
-        ))}
       </div>
     </section>
   );
@@ -1394,7 +1407,6 @@ function App() {
     setPositions((positionRows ?? []).map(positionFromRow));
     const nextCommunities = (communityRows ?? []).map(communityFromRow);
     setCommunities(nextCommunities);
-    if (!selectedCommunityId && nextCommunities[0]?.id) setSelectedCommunityId(nextCommunities[0].id);
     await Promise.all([loadFriends(user.id), loadSentMarkets(user.id), loadCommunityMessages()]);
     setDataReady(true);
   }
@@ -1962,6 +1974,7 @@ function App() {
             selectedCommunityId={selectedCommunityId}
             setSelectedCommunityId={setSelectedCommunityId}
             communityMessages={communityMessages}
+            markets={markets}
             friendsList={friendsList}
             sentMarkets={sentMarkets}
             friendMarkets={friendMarkets}
