@@ -330,12 +330,14 @@ function marketFromRow(row) {
   };
 }
 
-function communityFromRow(row) {
+function communityFromRow(row, membership = {}) {
   return {
     id: row.id,
     name: row.name,
     type: row.type === "public" ? "Public" : "Private",
-    members: row.members ?? 1,
+    creatorId: row.creator_id,
+    members: membership.members ?? row.members ?? 1,
+    isMember: Boolean(membership.isMember),
     pnl: row.pnl ?? 0,
     seasonPot: row.season_pot ?? 0,
     logoKind: row.logo_kind || "emoji",
@@ -1019,6 +1021,8 @@ function FriendsView({
   setCommunityLogoValue,
   selectedCommunityId,
   setSelectedCommunityId,
+  communityInviteFriendId,
+  setCommunityInviteFriendId,
   communityMessages,
   chatDraft,
   setChatDraft,
@@ -1030,9 +1034,12 @@ function FriendsView({
   setFriendUsername,
   onAddFriend,
   onCreateCommunity,
+  onJoinCommunity,
+  onInviteFriendToCommunity,
   onSendCommunityMessage,
   toast,
   onOpenMarket,
+  currentUserId,
 }) {
   const filteredCommunities = communities
     .map((group) => ({ group, score: fuzzyScoreCommunity(group, communitySearch) }))
@@ -1072,6 +1079,20 @@ function FriendsView({
             </div>
             <Pill tone={activeCommunity.type === "Public" ? "hot" : "good"}>{activeCommunity.type}</Pill>
           </div>
+          {activeCommunity.creatorId === currentUserId && (
+            <form className="community-invite-form" onSubmit={(event) => onInviteFriendToCommunity(event, activeCommunity.id)}>
+              <label>
+                <span>Invite friend</span>
+                <select value={communityInviteFriendId} onChange={(event) => setCommunityInviteFriendId(event.target.value)}>
+                  <option value="">Choose friend</option>
+                  {friendsList.map((friend) => (
+                    <option key={friend.id} value={friend.id}>{friend.name}</option>
+                  ))}
+                </select>
+              </label>
+              <button type="submit">Invite</button>
+            </form>
+          )}
           <div className="community-room-section">
             <h4>Past bets</h4>
             <div className="friend-bet-list">
@@ -1237,13 +1258,32 @@ function FriendsView({
               <p className="subtle">No communities match that search.</p>
             ) : (
               filteredCommunities.map((group) => (
-                <button className="community-directory-row" type="button" key={group.id || group.name} onClick={() => setSelectedCommunityId(group.id)}>
-                  <CommunityLogo community={group} />
-                  <span>
-                    <strong>{group.name}</strong>
-                    <small>{group.type} · {group.members} members</small>
-                  </span>
-                </button>
+                <div className="community-directory-row" key={group.id || group.name}>
+                  <button
+                    className="community-directory-main"
+                    type="button"
+                    onClick={() => {
+                      if (group.isMember) {
+                        setSelectedCommunityId(group.id);
+                        return;
+                      }
+                      if (group.type === "Private") toast("Private communities are invite only.");
+                    }}
+                  >
+                    <CommunityLogo community={group} />
+                    <span>
+                      <strong>{group.name}</strong>
+                      <small>{group.type} · {group.members} members</small>
+                    </span>
+                  </button>
+                  {group.isMember ? (
+                    <button className="community-row-action open" type="button" onClick={() => setSelectedCommunityId(group.id)}>Open</button>
+                  ) : group.type === "Public" ? (
+                    <button className="community-row-action" type="button" onClick={() => onJoinCommunity(group.id)}>Join</button>
+                  ) : (
+                    <span className="community-row-lock">Invite only</span>
+                  )}
+                </div>
               ))
             )}
           </div>
@@ -1528,6 +1568,7 @@ function App() {
   const [communityLogoKind, setCommunityLogoKind] = useState("emoji");
   const [communityLogoValue, setCommunityLogoValue] = useState("🏠");
   const [selectedCommunityId, setSelectedCommunityId] = useState("");
+  const [communityInviteFriendId, setCommunityInviteFriendId] = useState("");
   const [chatDraft, setChatDraft] = useState("");
   const [friendsList, setFriendsList] = useState([]);
   const [sentMarkets, setSentMarkets] = useState([]);
@@ -1627,19 +1668,29 @@ function App() {
       { data: marketRows, error: marketsError },
       { data: positionRows, error: positionsError },
       { data: communityRows, error: communitiesError },
+      { data: memberRows, error: membersError },
     ] =
       await Promise.all([
         supabase.from("markets").select("*").order("created_at", { ascending: false }),
         supabase.from("positions").select("*").eq("profile_id", user.id).order("created_at", { ascending: false }),
         supabase.from("communities").select("*").order("created_at", { ascending: false }),
+        supabase.from("community_members").select("community_id, profile_id"),
       ]);
 
     if (marketsError) toast(marketsError.message);
     if (positionsError) toast(positionsError.message);
     if (communitiesError) toast(communitiesError.message);
+    if (membersError) toast(membersError.message);
     setMarkets((marketRows ?? []).map(marketFromRow));
     setPositions((positionRows ?? []).map(positionFromRow));
-    const nextCommunities = (communityRows ?? []).map(communityFromRow);
+    const membership = new Map();
+    (memberRows ?? []).forEach((row) => {
+      const current = membership.get(row.community_id) || { members: 0, isMember: false };
+      current.members += 1;
+      if (row.profile_id === user.id) current.isMember = true;
+      membership.set(row.community_id, current);
+    });
+    const nextCommunities = (communityRows ?? []).map((row) => communityFromRow(row, membership.get(row.id)));
     setCommunities(nextCommunities);
     await Promise.all([loadFriends(user.id), loadSentMarkets(user.id), loadCommunityMessages(), loadVoteCounts(user.id)]);
     setDataReady(true);
@@ -2223,6 +2274,8 @@ function App() {
         toast(memberError.message);
       }
       const nextCommunity = communityFromRow(data);
+      nextCommunity.isMember = true;
+      nextCommunity.members = 1;
       setCommunities((current) => [nextCommunity, ...current]);
       setSelectedCommunityId(nextCommunity.id);
     } else {
@@ -2233,6 +2286,7 @@ function App() {
         members: 1,
         pnl: 0,
         seasonPot: 0,
+        isMember: true,
         logoKind: communityLogoKind,
         logoValue: communityLogoValue,
       }, ...current]);
@@ -2241,6 +2295,58 @@ function App() {
     setCommunityLogoKind("emoji");
     setCommunityLogoValue("🏠");
     toast(`${type} community created.`);
+  }
+
+  async function joinCommunity(communityId) {
+    const community = communities.find((group) => String(group.id) === String(communityId));
+    if (!community) return;
+    if (community.type === "Private") {
+      toast("Private communities are invite only.");
+      return;
+    }
+    if (!supabase || !userProfile) return;
+    const { error } = await supabase.from("community_members").insert({
+      community_id: communityId,
+      profile_id: userProfile.id,
+      role: "member",
+    });
+    if (error) {
+      toast(error.code === "23505" ? "You are already in this community." : error.message);
+      return;
+    }
+    setCommunities((current) => current.map((group) => (
+      String(group.id) === String(communityId)
+        ? { ...group, isMember: true, members: group.members + 1 }
+        : group
+    )));
+    toast(`Joined ${community.name}.`);
+  }
+
+  async function inviteFriendToCommunity(event, communityId) {
+    event.preventDefault();
+    const friend = friendsList.find((item) => item.id === communityInviteFriendId);
+    const community = communities.find((group) => String(group.id) === String(communityId));
+    if (!friend || !community) {
+      toast("Choose a friend to invite.");
+      return;
+    }
+    if (!supabase || !userProfile) return;
+    const { error } = await supabase.from("community_members").insert({
+      community_id: communityId,
+      profile_id: friend.id,
+      role: "member",
+    });
+    if (error) {
+      toast(error.code === "23505" ? `${friend.name} is already in this community.` : error.message);
+      return;
+    }
+    setCommunities((current) => current.map((group) => (
+      String(group.id) === String(communityId)
+        ? { ...group, members: group.members + 1 }
+        : group
+    )));
+    setCommunityInviteFriendId("");
+    toast(`Invited ${friend.name} to ${community.name}.`);
   }
 
   function buyCosmetic(name, price) {
@@ -2324,6 +2430,8 @@ function App() {
             setCommunityLogoValue={setCommunityLogoValue}
             selectedCommunityId={selectedCommunityId}
             setSelectedCommunityId={setSelectedCommunityId}
+            communityInviteFriendId={communityInviteFriendId}
+            setCommunityInviteFriendId={setCommunityInviteFriendId}
             communityMessages={communityMessages}
             chatDraft={chatDraft}
             setChatDraft={setChatDraft}
@@ -2335,9 +2443,12 @@ function App() {
             setFriendUsername={setFriendUsername}
             onAddFriend={addFriend}
             onCreateCommunity={createCommunity}
+            onJoinCommunity={joinCommunity}
+            onInviteFriendToCommunity={inviteFriendToCommunity}
             onSendCommunityMessage={sendCommunityMessage}
             toast={toast}
             onOpenMarket={openMarketFromFriends}
+            currentUserId={userProfile?.id}
           />
         )}
         {view === "bets" && <MyBetsView positions={positions} createdMarkets={createdMarkets} />}

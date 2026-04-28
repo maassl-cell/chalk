@@ -2093,6 +2093,49 @@ body {
   margin-bottom: 4px;
 }
 
+.community-invite-form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 16px;
+  background: #f7f4ed;
+  border: 1px solid var(--line);
+}
+
+.community-invite-form label {
+  display: grid;
+  gap: 6px;
+}
+
+.community-invite-form span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.community-invite-form select {
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 14px;
+  color: var(--ink);
+  background: #fffdf8;
+  border: 1px solid var(--line);
+  font-weight: 800;
+}
+
+.community-invite-form button {
+  align-self: end;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 14px;
+  color: white;
+  background: var(--blue);
+  font-weight: 950;
+}
+
 .community-room-section {
   display: grid;
   gap: 10px;
@@ -2386,9 +2429,51 @@ body {
   border: 1px solid var(--line);
 }
 
-.friend-bet-list button.community-directory-row {
+.friend-bet-list .community-directory-row {
+  min-height: 64px;
+  padding: 10px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+  border-radius: 16px;
+  color: var(--ink);
+  background: #f7f4ed;
+  border: 1px solid var(--line);
+}
+
+.friend-bet-list .community-directory-main {
+  min-height: 42px;
+  padding: 0;
+  display: grid;
   grid-template-columns: auto 1fr;
   align-items: center;
+  gap: 12px;
+  background: transparent;
+  border: 0;
+}
+
+.community-row-action,
+.community-row-lock {
+  min-height: 38px;
+  padding: 0 14px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  color: white;
+  background: var(--blue);
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.community-row-action.open {
+  color: var(--green);
+  background: rgba(34, 197, 94, 0.12);
+}
+
+.community-row-lock {
+  color: var(--muted);
+  background: #ebe7de;
 }
 
 .community-directory-row > span {

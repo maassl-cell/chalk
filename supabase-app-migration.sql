@@ -108,7 +108,15 @@ create policy "Authenticated users can create communities" on communities for in
 drop policy if exists "Authenticated users can read community members" on community_members;
 create policy "Authenticated users can read community members" on community_members for select to authenticated using (true);
 drop policy if exists "Authenticated users can join communities" on community_members;
-create policy "Authenticated users can join communities" on community_members for insert to authenticated with check (auth.uid() = profile_id);
+create policy "Authenticated users can join communities" on community_members for insert to authenticated with check (
+  auth.uid() = profile_id
+  or exists (
+    select 1
+    from communities
+    where communities.id = community_members.community_id
+      and communities.creator_id = auth.uid()
+  )
+);
 
 drop policy if exists "Authenticated users can read community messages" on community_messages;
 create policy "Authenticated users can read community messages" on community_messages for select to authenticated using (true);
