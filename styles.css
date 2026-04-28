@@ -2304,6 +2304,64 @@ body {
   font-weight: 800;
 }
 
+.friend-bet-list .mini-market-tile {
+  position: relative;
+  padding: 14px;
+  gap: 10px;
+  background:
+    linear-gradient(180deg, #fffdf8, #f7f4ed);
+}
+
+.mini-market-tile .mini-market-status {
+  justify-self: start;
+  min-height: 24px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  color: var(--blue);
+  background: rgba(111, 85, 255, 0.1);
+  font-size: 11px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.mini-market-tile strong {
+  font-size: 17px;
+}
+
+.mini-market-tile div {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.mini-market-tile div span {
+  min-height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  color: white;
+  font-size: 14px;
+  font-weight: 950;
+}
+
+.mini-market-tile .yes {
+  background: var(--green);
+}
+
+.mini-market-tile .no {
+  background: var(--red);
+}
+
+.mini-market-tile .even {
+  background: var(--blue);
+}
+
+.mini-market-tile small {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .send-market {
   display: grid;
   gap: 10px;

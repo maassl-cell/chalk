@@ -1014,9 +1014,14 @@ function FriendsView({
                 <p className="subtle">No bets have been posted in this community yet.</p>
               ) : (
                 activeCommunityMarkets.map((market) => (
-                  <button type="button" key={market.id} onClick={() => onOpenMarket(market.id)}>
+                  <button className="mini-market-tile" type="button" key={market.id} onClick={() => onOpenMarket(market.id)}>
+                    <span className="mini-market-status">{market.status}</span>
                     <strong>{market.title}</strong>
-                    <span>{market.yes}% YES · {market.volume.toLocaleString()} volume · {market.status}</span>
+                    <div>
+                      <span className={market.yes === 50 ? "even" : "yes"}>YES {market.yes}%</span>
+                      <span className={market.yes === 50 ? "even" : "no"}>NO {100 - market.yes}%</span>
+                    </div>
+                    <small>{market.traders ?? 0} traders · {market.volume.toLocaleString()} volume</small>
                   </button>
                 ))
               )}
