@@ -1389,6 +1389,17 @@ button {
     border-radius: 14px;
   }
 
+  .claim-button {
+    min-width: 86px;
+    min-height: 48px;
+    padding: 0 10px;
+    border-radius: 14px;
+  }
+
+  .claim-button strong {
+    font-size: 13px;
+  }
+
   .credit-pill span {
     font-size: 10px;
   }
@@ -1626,6 +1637,47 @@ body {
   background: white;
   border: 1px solid var(--line);
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.04);
+}
+
+.claim-button {
+  min-width: 108px;
+  min-height: 46px;
+  padding: 0 14px;
+  display: grid;
+  place-items: center;
+  gap: 1px;
+  border-radius: 999px;
+  color: var(--muted);
+  background: #f4f1e9;
+  border: 1px solid var(--line);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.04);
+  font-weight: 900;
+}
+
+.claim-button span {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.claim-button strong {
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1;
+}
+
+.claim-button.ready {
+  color: white;
+  background: var(--green);
+  border-color: var(--green);
+}
+
+.claim-button.ready strong {
+  color: white;
+}
+
+.claim-button:disabled {
+  cursor: not-allowed;
 }
 
 .credit-pill span {

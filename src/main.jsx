@@ -48,6 +48,8 @@ const MARKET_SEED_POOL = 100;
 const MIN_SEED_POOL = 100;
 const POOL_FEE_RATE = 0.03;
 const INFINITE_CREDITS = 999999999;
+const DAILY_CLAIM_AMOUNT = 1000;
+const DAILY_CLAIM_MS = 24 * 60 * 60 * 1000;
 
 function currency(value) {
   if (value >= INFINITE_CREDITS) return "∞";
@@ -135,6 +137,25 @@ function timeLeftLabel(closes, now = Date.now()) {
   return `${seconds}s left`;
 }
 
+function claimCountdownLabel(lastClaimAt, now = Date.now()) {
+  if (!lastClaimAt) return "";
+  const lastClaimTime = new Date(lastClaimAt).getTime();
+  if (Number.isNaN(lastClaimTime)) return "";
+  const remaining = lastClaimTime + DAILY_CLAIM_MS - now;
+  if (remaining <= 0) return "";
+  const hours = Math.floor(remaining / 3600000);
+  const minutes = Math.floor((remaining % 3600000) / 60000);
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${Math.max(1, minutes)}m`;
+}
+
+function canClaimCredits(lastClaimAt, now = Date.now()) {
+  if (!lastClaimAt) return true;
+  const lastClaimTime = new Date(lastClaimAt).getTime();
+  if (Number.isNaN(lastClaimTime)) return true;
+  return now - lastClaimTime >= DAILY_CLAIM_MS;
+}
+
 function formatAxisDate(date) {
   return `${date.getMonth() + 1}/${date.getDate()}`;
 }
@@ -158,6 +179,7 @@ function profileFromUser(user) {
     display_name: displayName,
     email: user.email,
     credits: 0,
+    last_credit_claim_at: null,
   };
 }
 
@@ -739,7 +761,7 @@ function AuthGate({ onSession }) {
   );
 }
 
-function Sidebar({ view, setView, credits, streak, onDaily, openModal, user, onSignOut }) {
+function Sidebar({ view, setView, credits, streak, claimReady, claimCountdown, onClaimCredits, openModal, user, onSignOut }) {
   const [showHero, setShowHero] = useState(true);
   const displayName = user?.user_metadata?.display_name || profile.name;
   const initials = displayName
@@ -760,6 +782,15 @@ function Sidebar({ view, setView, credits, streak, onDaily, openModal, user, onS
           <button className="credit-pill" title="Credits" aria-label="Credits">
             <span>¢</span>
             <strong>{currency(credits)}</strong>
+          </button>
+          <button
+            className={`claim-button ${claimReady ? "ready" : ""}`}
+            type="button"
+            onClick={onClaimCredits}
+            disabled={!claimReady}
+          >
+            <span>{claimReady ? "Claim" : "Next"}</span>
+            <strong>{claimReady ? "+1,000" : claimCountdown}</strong>
           </button>
           <button className="bell" title="Notifications" aria-label="Notifications">♢<i /></button>
           <button className="profile-dot" title={displayName} aria-label="Profile" onClick={() => setView("profile")}>
@@ -1177,7 +1208,7 @@ function ShopView({ onBuyCosmetic }) {
       <div className="topbar">
         <div className="title">
           <h2>Balance is for clout too.</h2>
-          <p>Your balance can buy contracts or profile upgrades. New users start at 1,000 and earn more for logging in.</p>
+          <p>Your balance can buy contracts or profile upgrades. Every user can claim 1,000 credits every 24 hours.</p>
         </div>
       </div>
       <div className="market-grid">
@@ -1239,6 +1270,7 @@ function App() {
   const [authReady, setAuthReady] = useState(false);
   const [dataReady, setDataReady] = useState(false);
   const [userProfile, setUserProfile] = useState(null);
+  const [now, setNow] = useState(() => Date.now());
   const [view, setView] = useState("markets");
   const [tab, setTab] = useState("all");
   const [search, setSearch] = useState("");
@@ -1257,6 +1289,11 @@ function App() {
   const [friendUsername, setFriendUsername] = useState("");
   const [modal, setModal] = useState(null);
   const [toastText, setToastText] = useState("");
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 30000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     if (!supabase) {
@@ -1520,6 +1557,37 @@ function App() {
       await supabase.from("profiles").update({ credits: nextCredits }).eq("id", userProfile.id);
       setUserProfile((current) => (current ? { ...current, credits: nextCredits } : current));
     }
+  }
+
+  async function claimCredits() {
+    if (!userProfile) return;
+    if (!canClaimCredits(userProfile.last_credit_claim_at, now)) {
+      toast(`Next claim in ${claimCountdownLabel(userProfile.last_credit_claim_at, now)}.`);
+      return;
+    }
+    const claimedAt = new Date().toISOString();
+    const nextCredits = (credits >= INFINITE_CREDITS ? 0 : credits) + DAILY_CLAIM_AMOUNT;
+    if (supabase) {
+      const { data, error } = await supabase
+        .from("profiles")
+        .update({
+          credits: nextCredits,
+          last_credit_claim_at: claimedAt,
+        })
+        .eq("id", userProfile.id)
+        .select("*")
+        .single();
+      if (error) {
+        toast(error.message);
+        return;
+      }
+      setUserProfile(data);
+    } else {
+      setUserProfile((current) => (current ? { ...current, credits: nextCredits, last_credit_claim_at: claimedAt } : current));
+    }
+    setCredits(nextCredits);
+    setNow(Date.now());
+    toast("Claimed 1,000 credits.");
   }
 
   async function signOut() {
@@ -1830,12 +1898,6 @@ function App() {
     toast(`${type} community created.`);
   }
 
-  function daily() {
-    setCredits((value) => (value >= INFINITE_CREDITS ? value : value + 100));
-    setStreak((value) => value + 1);
-    toast("Daily login paid 100.");
-  }
-
   function buyCosmetic(name, price) {
     if (credits < price) {
       toast(`${name} costs ${price}.`);
@@ -1847,6 +1909,8 @@ function App() {
 
   const friendIds = friendsList.map((friend) => friend.id);
   const friendMarkets = markets.filter((market) => friendIds.includes(market.creatorId));
+  const claimReady = canClaimCredits(userProfile?.last_credit_claim_at, now);
+  const claimCountdown = claimCountdownLabel(userProfile?.last_credit_claim_at, now);
 
   if (!authReady) {
     return <div className="loading-screen">Loading Chalk...</div>;
@@ -1867,7 +1931,9 @@ function App() {
         setView={setView}
         credits={credits}
         streak={streak}
-        onDaily={daily}
+        claimReady={claimReady}
+        claimCountdown={claimCountdown}
+        onClaimCredits={claimCredits}
         openModal={() => setModal("market")}
         user={session.user}
         onSignOut={signOut}

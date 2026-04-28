@@ -3,6 +3,7 @@
 
 alter table profiles alter column credits set default 0;
 alter table profiles add column if not exists email text unique;
+alter table profiles add column if not exists last_credit_claim_at timestamptz;
 
 alter table markets alter column community_id drop not null;
 alter table markets add column if not exists yes_pool integer not null default 50;
