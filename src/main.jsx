@@ -167,6 +167,7 @@ function friendFromProfile(row) {
     id: row.id,
     name: displayName,
     email: row.email,
+    handle: row.handle,
     initials: displayName
       .split(" ")
       .map((part) => part[0])
@@ -174,7 +175,7 @@ function friendFromProfile(row) {
       .slice(0, 2)
       .toUpperCase(),
     color: "violet",
-    line: row.email || "Chalk account",
+    line: row.handle ? `@${row.handle}` : row.email || "Chalk account",
   };
 }
 
@@ -801,23 +802,22 @@ function MarketsView({ markets, tab, setTab, search, setSearch, onBuy, onResolve
   );
 }
 
-function FriendsView({ communities, friendsList, friendEmail, setFriendEmail, onAddFriend, onCreateCommunity, toast }) {
+function FriendsView({ communities, friendsList, friendUsername, setFriendUsername, onAddFriend, onCreateCommunity, toast }) {
   return (
     <section>
       <div className="topbar">
         <div className="title">
           <h2>Friends & Groups</h2>
-          <p>Add friends by the email they used for Chalk. Friends can become rivals, chat, and join private markets.</p>
+          <p>Add friends by their Chalk username. Friends can become rivals, chat, and join private markets.</p>
         </div>
       </div>
       <form className="friend-add-card" onSubmit={onAddFriend}>
         <label>
           <span>Add friend</span>
           <input
-            type="email"
-            value={friendEmail}
-            placeholder="friend@email.com"
-            onChange={(event) => setFriendEmail(event.target.value)}
+            value={friendUsername}
+            placeholder="@username"
+            onChange={(event) => setFriendUsername(event.target.value)}
             required
           />
         </label>
@@ -833,7 +833,7 @@ function FriendsView({ communities, friendsList, friendEmail, setFriendEmail, on
               friendsList.map((friend) => (
                 <div className="dm-row" key={friend.id}>
                   <Avatar person={friend} color={friend.color} />
-                  <div><strong>{friend.name}</strong><span>{friend.email}</span></div>
+                  <div><strong>{friend.name}</strong><span>{friend.line}</span></div>
                 </div>
               ))
             )}
@@ -1108,7 +1108,7 @@ function App() {
   const [positions, setPositions] = useState([]);
   const [communities, setCommunities] = useState(initialCommunities);
   const [friendsList, setFriendsList] = useState([]);
-  const [friendEmail, setFriendEmail] = useState("");
+  const [friendUsername, setFriendUsername] = useState("");
   const [modal, setModal] = useState(null);
   const [toastText, setToastText] = useState("");
 
@@ -1221,7 +1221,7 @@ function App() {
     }
     const { data: profileRows, error: profilesError } = await supabase
       .from("profiles")
-      .select("id, display_name, email")
+      .select("id, display_name, email, handle")
       .in("id", friendIds);
     if (profilesError) {
       toast(profilesError.message);
@@ -1233,23 +1233,23 @@ function App() {
   async function addFriend(event) {
     event.preventDefault();
     if (!supabase || !userProfile) return;
-    const email = friendEmail.trim().toLowerCase();
-    if (!email) return;
-    if (email === userProfile.email) {
+    const username = friendUsername.trim().replace(/^@/, "").toLowerCase();
+    if (!username) return;
+    if (username === userProfile.handle) {
       toast("You cannot add yourself.");
       return;
     }
     const { data: friendProfile, error: lookupError } = await supabase
       .from("profiles")
-      .select("id, display_name, email")
-      .eq("email", email)
+      .select("id, display_name, email, handle")
+      .eq("handle", username)
       .maybeSingle();
     if (lookupError) {
       toast(lookupError.message);
       return;
     }
     if (!friendProfile) {
-      toast("No Chalk account found for that email yet.");
+      toast("No Chalk account found for that username yet.");
       return;
     }
     const { error } = await supabase.from("friendships").insert({
@@ -1261,7 +1261,7 @@ function App() {
       return;
     }
     setFriendsList((current) => [friendFromProfile(friendProfile), ...current]);
-    setFriendEmail("");
+    setFriendUsername("");
     toast(`${friendProfile.display_name} added.`);
   }
 
@@ -1554,8 +1554,8 @@ function App() {
           <FriendsView
             communities={communities}
             friendsList={friendsList}
-            friendEmail={friendEmail}
-            setFriendEmail={setFriendEmail}
+            friendUsername={friendUsername}
+            setFriendUsername={setFriendUsername}
             onAddFriend={addFriend}
             onCreateCommunity={createCommunity}
             toast={toast}
