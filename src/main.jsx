@@ -156,7 +156,25 @@ function profileFromUser(user) {
     id: user.id,
     handle: `${handleBase}${user.id.slice(0, 4)}`,
     display_name: displayName,
+    email: user.email,
     credits: 0,
+  };
+}
+
+function friendFromProfile(row) {
+  const displayName = row.display_name || row.email?.split("@")[0] || "Chalk friend";
+  return {
+    id: row.id,
+    name: displayName,
+    email: row.email,
+    initials: displayName
+      .split(" ")
+      .map((part) => part[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase(),
+    color: "violet",
+    line: row.email || "Chalk account",
   };
 }
 
@@ -722,7 +740,7 @@ function Sidebar({ view, setView, credits, streak, onDaily, openModal, user, onS
         <button className={view === "markets" ? "active" : ""} onClick={() => setView("markets")}>⌂<span>Feed</span></button>
         <button className={view === "bets" ? "active" : ""} onClick={() => setView("bets")}>↗<span>My Bets</span></button>
         <button className="create-tab" aria-label="Create bet" title="Create bet" onClick={openModal}>+</button>
-        <button className={view === "groups" ? "active" : ""} onClick={() => setView("groups")}>♧<span>Groups</span></button>
+        <button className={view === "groups" ? "active" : ""} onClick={() => setView("groups")}>♧<span>Friends</span></button>
         <button className={view === "profile" ? "active" : ""} onClick={() => setView("profile")}>♙<span>Profile</span></button>
       </nav>
       {showHero && (
@@ -783,20 +801,44 @@ function MarketsView({ markets, tab, setTab, search, setSearch, onBuy, onResolve
   );
 }
 
-function GroupsView({ communities, onCreateCommunity, toast }) {
+function FriendsView({ communities, friendsList, friendEmail, setFriendEmail, onAddFriend, onCreateCommunity, toast }) {
   return (
     <section>
       <div className="topbar">
         <div className="title">
-          <h2>Communities keep the market honest.</h2>
-          <p>Private groups are invite-only and trust-based. Public communities require app approval for markets and resolution rules.</p>
-        </div>
-        <div className="split">
-          <button className="secondary" onClick={() => onCreateCommunity("Private")}>Private · 200</button>
-          <button className="primary" onClick={() => onCreateCommunity("Public")}>Public · 500</button>
+          <h2>Friends & Groups</h2>
+          <p>Add friends by the email they used for Chalk. Friends can become rivals, chat, and join private markets.</p>
         </div>
       </div>
+      <form className="friend-add-card" onSubmit={onAddFriend}>
+        <label>
+          <span>Add friend</span>
+          <input
+            type="email"
+            value={friendEmail}
+            placeholder="friend@email.com"
+            onChange={(event) => setFriendEmail(event.target.value)}
+            required
+          />
+        </label>
+        <button className="primary">Add</button>
+      </form>
       <div className="market-grid">
+        <article className="market-card compact-card">
+          <h3>Friends</h3>
+          <div className="friend-list">
+            {friendsList.length === 0 ? (
+              <p className="subtle">No friends yet. Add someone by email once they have a Chalk account.</p>
+            ) : (
+              friendsList.map((friend) => (
+                <div className="dm-row" key={friend.id}>
+                  <Avatar person={friend} color={friend.color} />
+                  <div><strong>{friend.name}</strong><span>{friend.email}</span></div>
+                </div>
+              ))
+            )}
+          </div>
+        </article>
         {communities.map((group) => (
           <article className="market-card" key={group.name}>
             <div className="market-top">
@@ -818,6 +860,10 @@ function GroupsView({ communities, onCreateCommunity, toast }) {
             </button>
           </article>
         ))}
+      </div>
+      <div className="split community-actions">
+        <button className="secondary" onClick={() => onCreateCommunity("Private")}>Private · 200</button>
+        <button className="primary" onClick={() => onCreateCommunity("Public")}>Public · 500</button>
       </div>
     </section>
   );
@@ -1061,6 +1107,8 @@ function App() {
   const [markets, setMarkets] = useState(initialMarkets);
   const [positions, setPositions] = useState([]);
   const [communities, setCommunities] = useState(initialCommunities);
+  const [friendsList, setFriendsList] = useState([]);
+  const [friendEmail, setFriendEmail] = useState("");
   const [modal, setModal] = useState(null);
   const [toastText, setToastText] = useState("");
 
@@ -1089,6 +1137,7 @@ function App() {
       setUserProfile(null);
       setMarkets(initialMarkets);
       setPositions([]);
+      setFriendsList([]);
       return;
     }
     loadAppData(session.user);
@@ -1123,6 +1172,20 @@ function App() {
     }
 
     if (nextProfile) {
+      const updates = {};
+      if (!nextProfile.email && user.email) updates.email = user.email;
+      if (nextProfile.display_name !== profileDraft.display_name && user.user_metadata?.display_name) {
+        updates.display_name = profileDraft.display_name;
+      }
+      if (Object.keys(updates).length) {
+        const { data: updatedProfile } = await supabase
+          .from("profiles")
+          .update(updates)
+          .eq("id", user.id)
+          .select("*")
+          .single();
+        nextProfile = updatedProfile || nextProfile;
+      }
       setUserProfile(nextProfile);
       setCredits(nextProfile.credits ?? 0);
     }
@@ -1137,7 +1200,69 @@ function App() {
     if (positionsError) toast(positionsError.message);
     setMarkets((marketRows ?? []).map(marketFromRow));
     setPositions((positionRows ?? []).map(positionFromRow));
+    await loadFriends(user.id);
     setDataReady(true);
+  }
+
+  async function loadFriends(userId) {
+    if (!supabase) return;
+    const { data: friendshipRows, error } = await supabase
+      .from("friendships")
+      .select("friend_id")
+      .eq("owner_id", userId);
+    if (error) {
+      toast(error.message);
+      return;
+    }
+    const friendIds = (friendshipRows ?? []).map((row) => row.friend_id);
+    if (!friendIds.length) {
+      setFriendsList([]);
+      return;
+    }
+    const { data: profileRows, error: profilesError } = await supabase
+      .from("profiles")
+      .select("id, display_name, email")
+      .in("id", friendIds);
+    if (profilesError) {
+      toast(profilesError.message);
+      return;
+    }
+    setFriendsList((profileRows ?? []).map(friendFromProfile));
+  }
+
+  async function addFriend(event) {
+    event.preventDefault();
+    if (!supabase || !userProfile) return;
+    const email = friendEmail.trim().toLowerCase();
+    if (!email) return;
+    if (email === userProfile.email) {
+      toast("You cannot add yourself.");
+      return;
+    }
+    const { data: friendProfile, error: lookupError } = await supabase
+      .from("profiles")
+      .select("id, display_name, email")
+      .eq("email", email)
+      .maybeSingle();
+    if (lookupError) {
+      toast(lookupError.message);
+      return;
+    }
+    if (!friendProfile) {
+      toast("No Chalk account found for that email yet.");
+      return;
+    }
+    const { error } = await supabase.from("friendships").insert({
+      owner_id: userProfile.id,
+      friend_id: friendProfile.id,
+    });
+    if (error) {
+      toast(error.code === "23505" ? "Friend already added." : error.message);
+      return;
+    }
+    setFriendsList((current) => [friendFromProfile(friendProfile), ...current]);
+    setFriendEmail("");
+    toast(`${friendProfile.display_name} added.`);
   }
 
   async function saveCredits(nextCredits) {
@@ -1425,7 +1550,17 @@ function App() {
       />
       <main className="main">
         {view === "markets" && <MarketsView markets={markets} tab={tab} setTab={setTab} search={search} setSearch={setSearch} onBuy={buy} onResolve={resolveMarket} />}
-        {view === "groups" && <GroupsView communities={communities} onCreateCommunity={createCommunity} toast={toast} />}
+        {view === "groups" && (
+          <FriendsView
+            communities={communities}
+            friendsList={friendsList}
+            friendEmail={friendEmail}
+            setFriendEmail={setFriendEmail}
+            onAddFriend={addFriend}
+            onCreateCommunity={createCommunity}
+            toast={toast}
+          />
+        )}
         {view === "bets" && <MyBetsView positions={positions} />}
         {view === "profile" && <ProfileView positions={positions} userProfile={userProfile} />}
         {view === "dm" && <DmsView setView={setView} toast={toast} />}

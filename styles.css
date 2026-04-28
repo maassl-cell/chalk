@@ -2014,6 +2014,69 @@ body {
   font-weight: 900;
 }
 
+.friend-add-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 16px;
+  border-radius: 22px;
+  background: white;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+
+.friend-add-card label {
+  display: grid;
+  gap: 6px;
+}
+
+.friend-add-card span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.friend-add-card input {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  border-radius: 14px;
+  color: var(--ink);
+  background: #fffdf8;
+  border: 1px solid var(--line);
+  font-size: 16px;
+  font-weight: 750;
+}
+
+.friend-add-card .primary {
+  align-self: end;
+  min-height: 48px;
+  padding: 0 22px;
+  border-radius: 14px;
+  background: var(--blue);
+  border: 0;
+  font-size: 16px;
+}
+
+.friend-list {
+  display: grid;
+  gap: 14px;
+}
+
+.friend-list .dm-row {
+  padding: 12px;
+  border-radius: 16px;
+  background: #f7f4ed;
+  border: 1px solid var(--line);
+}
+
+.community-actions {
+  margin-top: 20px;
+}
+
 .chart-modal-backdrop {
   position: fixed;
   inset: 0;
