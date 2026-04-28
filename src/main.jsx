@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { supabase } from "./supabaseClient";
 import "../styles.css";
 
 const initialMarkets = [];
@@ -506,8 +507,99 @@ function MarketModal({ communities, onClose, onCreate }) {
   );
 }
 
-function Sidebar({ view, setView, credits, streak, onDaily, openModal }) {
+function AuthGate({ onSession }) {
+  const [mode, setMode] = useState("signup");
+  const [name, setName] = useState("Lucas Maass");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [status, setStatus] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function submit(event) {
+    event.preventDefault();
+    if (!supabase) {
+      setStatus("Supabase is not connected yet.");
+      return;
+    }
+    setLoading(true);
+    setStatus("");
+
+    const authCall =
+      mode === "signup"
+        ? supabase.auth.signUp({
+            email,
+            password,
+            options: { data: { display_name: name } },
+          })
+        : supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await authCall;
+
+    setLoading(false);
+    if (error) {
+      setStatus(error.message);
+      return;
+    }
+    if (data.session) {
+      onSession(data.session);
+      return;
+    }
+    setStatus("Check your email to confirm your account, then come back and log in.");
+  }
+
+  return (
+    <main className="auth-shell">
+      <section className="auth-card">
+        <div className="brand auth-brand">
+          <div className="brand-mark">C</div>
+          <h1>Chalk<span>.</span></h1>
+        </div>
+        <div className="auth-copy">
+          <p className="streak-label">Welcome</p>
+          <h2>{mode === "signup" ? "Create your account" : "Log back in"}</h2>
+          <p>Trade social markets with your groups and keep receipts when calls settle.</p>
+        </div>
+        <div className="auth-tabs">
+          <button type="button" className={mode === "signup" ? "active" : ""} onClick={() => setMode("signup")}>
+            Sign up
+          </button>
+          <button type="button" className={mode === "login" ? "active" : ""} onClick={() => setMode("login")}>
+            Log in
+          </button>
+        </div>
+        <form className="auth-form" onSubmit={submit}>
+          {mode === "signup" && (
+            <label>
+              <span>Name</span>
+              <input value={name} onChange={(event) => setName(event.target.value)} required />
+            </label>
+          )}
+          <label>
+            <span>Email</span>
+            <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
+          </label>
+          <label>
+            <span>Password</span>
+            <input type="password" minLength="6" value={password} onChange={(event) => setPassword(event.target.value)} required />
+          </label>
+          <button className="auth-submit" disabled={loading}>
+            {loading ? "Working..." : mode === "signup" ? "Create Account" : "Log In"}
+          </button>
+          {status && <p className="auth-status">{status}</p>}
+        </form>
+      </section>
+    </main>
+  );
+}
+
+function Sidebar({ view, setView, credits, streak, onDaily, openModal, user, onSignOut }) {
   const [showHero, setShowHero] = useState(true);
+  const displayName = user?.user_metadata?.display_name || profile.name;
+  const initials = displayName
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <aside className="sidebar">
@@ -522,7 +614,10 @@ function Sidebar({ view, setView, credits, streak, onDaily, openModal }) {
             <strong>{currency(credits)}</strong>
           </button>
           <button className="bell" title="Notifications" aria-label="Notifications">♢<i /></button>
-          <button className="profile-dot" title="Profile" aria-label="Profile">{profile.initials}</button>
+          <button className="profile-dot" title={displayName} aria-label="Profile" onClick={() => setView("profile")}>
+            {initials || profile.initials}
+          </button>
+          <button className="signout-button" type="button" onClick={onSignOut}>Log out</button>
         </div>
       </div>
       <nav className="nav">
@@ -848,6 +943,8 @@ function SocialRail() {
 }
 
 function App() {
+  const [session, setSession] = useState(null);
+  const [authReady, setAuthReady] = useState(false);
   const [view, setView] = useState("markets");
   const [tab, setTab] = useState("all");
   const [search, setSearch] = useState("");
@@ -858,6 +955,30 @@ function App() {
   const [communities, setCommunities] = useState(initialCommunities);
   const [modal, setModal] = useState(null);
   const [toastText, setToastText] = useState("");
+
+  useEffect(() => {
+    if (!supabase) {
+      setAuthReady(true);
+      return undefined;
+    }
+
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session ?? null);
+      setAuthReady(true);
+    });
+
+    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+      setAuthReady(true);
+    });
+
+    return () => data.subscription.unsubscribe();
+  }, []);
+
+  async function signOut() {
+    if (supabase) await supabase.auth.signOut();
+    setSession(null);
+  }
 
   function toast(message) {
     setToastText(message);
@@ -1005,9 +1126,26 @@ function App() {
     toast(`Purchased ${name} for ${price}.`);
   }
 
+  if (!authReady) {
+    return <div className="loading-screen">Loading Chalk...</div>;
+  }
+
+  if (!session) {
+    return <AuthGate onSession={setSession} />;
+  }
+
   return (
     <div className="shell">
-      <Sidebar view={view} setView={setView} credits={credits} streak={streak} onDaily={daily} openModal={() => setModal("market")} />
+      <Sidebar
+        view={view}
+        setView={setView}
+        credits={credits}
+        streak={streak}
+        onDaily={daily}
+        openModal={() => setModal("market")}
+        user={session.user}
+        onSignOut={signOut}
+      />
       <main className="main">
         {view === "markets" && <MarketsView markets={markets} tab={tab} setTab={setTab} search={search} setSearch={setSearch} onBuy={buy} onResolve={resolveMarket} />}
         {view === "groups" && <GroupsView communities={communities} onCreateCommunity={createCommunity} toast={toast} />}
